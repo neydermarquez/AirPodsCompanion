@@ -1,58 +1,29 @@
 package com.example.airpodscompanion.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val DarkColors = darkColorScheme(
+    primary = Cyan, onPrimary = Navy950, primaryContainer = Navy700, onPrimaryContainer = ColorTokens.DarkText,
+    secondary = Teal, secondaryContainer = Color(0xFF123B3D), background = Navy950, surface = Navy900,
+    surfaceVariant = Color(0xFF1A3043), onBackground = ColorTokens.DarkText, onSurface = ColorTokens.DarkText,
+    onSurfaceVariant = Color(0xFFB2C4D5), outline = Color(0xFF476176)
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val LightColors = lightColorScheme(
+    primary = ElectricBlue, onPrimary = Color.White, primaryContainer = Color(0xFFDCEEFF), onPrimaryContainer = Ink,
+    secondary = Teal, secondaryContainer = Color(0xFFD8F4EE), background = Ice, surface = Color.White,
+    surfaceVariant = Color(0xFFE5EEF6), onBackground = Ink, onSurface = Ink, onSurfaceVariant = Slate,
+    outline = Color(0xFFB6C8D8)
 )
+
+private object ColorTokens { val DarkText = Color(0xFFF2F7FC) }
 
 @Composable
-fun AirPodsCompanionTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+fun AirPodsCompanionTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = if (darkTheme) DarkColors else LightColors, typography = Typography, content = content)
 }
