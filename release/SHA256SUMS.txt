@@ -1,0 +1,2 @@
+97a751bbe0ecbb2d9c8d2bf36d35630967d070b30ccadd9da3606dc7d54ef52a  AirPods-Companion-v1.0.0.apk
+e740f8beb7545c70d930bc8237d4b21f9b4a07169974e96d0dbd8bd1625cc6ea  AirPods-Companion-v1.0.0.aab
