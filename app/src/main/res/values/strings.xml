@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">AirPodsCompanion</string>
+    <string name="app_name">AirPods Companion</string>
+    <string name="app_description">Compañero local para consultar y gestionar AirPods desde Android.</string>
+    <string name="widget_description">Estado real de conexión y batería de tus AirPods</string>
+    <string name="widget_icon_description">AirPods</string>
+    <string name="widget_reconnect">Conectar</string>
 </resources>
