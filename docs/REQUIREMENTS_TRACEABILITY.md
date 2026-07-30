@@ -4,7 +4,7 @@ Este documento cruza el inventario del proyecto con la implementación. Ninguna 
 
 ## Base publicada
 
-La referencia documental actual es `v1.0.1` (`versionCode` 2, commit `f33707f`). Esta versión incorpora por defecto un puente JNI experimental, compilado para las cuatro ABI admitidas. El puente amplía intentos de diagnóstico, pero no cambia el criterio de evidencia ni garantiza acceso en todos los fabricantes o versiones de Android.
+La referencia documental actual es `v1.0.2` (`versionCode` 3, commit de compilación `6c9dc70`). Esta versión incorpora por defecto un puente JNI experimental, compilado para las cuatro ABI admitidas. El puente amplía intentos de diagnóstico, pero no cambia el criterio de evidencia ni garantiza acceso en todos los fabricantes o versiones de Android.
 
 ## Conexión y estado
 

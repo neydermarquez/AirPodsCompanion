@@ -1,6 +1,6 @@
 # Guía inicial para crear aplicaciones Android
 
-> **Estado del documento:** guía histórica de planificación. AirPods Companion ya fue implementada y su versión pública actual es `v1.0.1`. Para conocer el estado real consulta `README.md`, `docs/REQUIREMENTS_TRACEABILITY.md` y `HARDWARE_TEST_MATRIX.md`. Las secciones redactadas en futuro describen el alcance original, no trabajo pendiente confirmado.
+> **Estado del documento:** guía histórica de planificación. AirPods Companion ya fue implementada y su versión pública actual es `v1.0.2`. Para conocer el estado real consulta `README.md`, `docs/REQUIREMENTS_TRACEABILITY.md` y `HARDWARE_TEST_MATRIX.md`. Las secciones redactadas en futuro describen el alcance original, no trabajo pendiente confirmado.
 
 ## Tecnología elegida
 

@@ -1,6 +1,6 @@
 # Guía de release
 
-La versión de referencia actual es `v1.0.1`. Desde esta versión, el puente nativo se compila por defecto.
+La versión de referencia actual es `v1.0.2`. El puente nativo se compila por defecto desde `v1.0.1`.
 
 ## Firma
 
@@ -74,7 +74,7 @@ Los archivos “Source code” los genera GitHub automáticamente. La Release de
 
 3. En GitHub, abrir **Releases** y seleccionar **Draft a new release**.
 4. Crear `v<versión>` como tag nuevo con destino `main`. Si el tag ya existe, comprobar su commit antes de continuar.
-5. Usar un título coherente, por ejemplo `AirPods Companion v1.0.1 (Edición única)`.
+5. Usar un título coherente, por ejemplo `AirPods Companion v1.0.2 (Edición única)`.
 6. Documentar cambios, funciones principales, instalación, requisitos y limitaciones reales.
 7. Adjuntar APK, AAB y `SHA256SUMS.txt`.
 8. Dejar **Pre-release** desmarcado para una versión estable.

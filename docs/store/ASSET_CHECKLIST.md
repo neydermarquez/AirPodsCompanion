@@ -1,13 +1,13 @@
 # Recursos de publicación
 
-Referencia revisada: `v1.0.1`.
+Referencia revisada: `v1.0.2`.
 
 ## Disponibles en el proyecto
 
 - Icono adaptativo y redondo.
 - Nombre y descripciones de tienda.
 - Fondo e identidad visual.
-- Capturas de permisos, dispositivos, actividad y ajustes utilizadas por el README.
+- Capturas de Inicio, Dispositivos, Actividad y Ajustes organizadas por versión en el README.
 - APK, AAB y sumas SHA-256 de la publicación actual.
 
 ## Capturas requeridas

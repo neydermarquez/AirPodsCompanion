@@ -1,6 +1,6 @@
 # Declaración de seguridad de datos
 
-Esta guía refleja `v1.0.1`. Debe volver a comprobarse en cada release.
+Esta guía refleja `v1.0.2`. Debe volver a comprobarse en cada release.
 
 ## Recopilación y compartición
 

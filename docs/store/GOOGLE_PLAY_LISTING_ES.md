@@ -1,6 +1,6 @@
 # Ficha de Google Play — Español
 
-Referencia revisada: `v1.0.1`.
+Referencia revisada: `v1.0.2`.
 
 ## Nombre
 
@@ -17,10 +17,10 @@ AirPods Companion reúne en una interfaz clara la información que Android puede
 Funciones principales:
 
 - Reconocimiento automático de dispositivos vinculados y conectados.
-- Estado real de Bluetooth, conexión y reconexión.
+- Estado real de Bluetooth, conexión, vinculación y reconexión.
 - Batería publicada por Android, con indicación de vigencia.
 - Controles multimedia compatibles.
-- Historial local de actividad y diagnósticos.
+- Historial local de actividad, diagnósticos y laboratorio de compatibilidad.
 - Notificaciones configurables de conexión, desconexión y batería baja.
 - Widget y supervisión opcional en segundo plano.
 - Matriz de compatibilidad por modelo.

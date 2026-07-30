@@ -4,8 +4,8 @@ No se marca una capacidad como compatible hasta observarla de forma reproducible
 
 ## Versión de referencia
 
-- Aplicación: `v1.0.1`.
-- Commit usado para compilar los binarios: `f33707f`.
+- Aplicación: `v1.0.2`.
+- Commit usado para compilar los binarios: `6c9dc70`.
 - Paquete: `com.soren.airpodscompanion`.
 - Puente nativo: habilitado por defecto.
 - NDK: `28.2.13676358`.

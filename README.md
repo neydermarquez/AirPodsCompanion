@@ -16,13 +16,29 @@
   <img src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-526b88" alt="Kotlin y Jetpack Compose">
 </p>
 
+<p align="center">
+  <a href="https://github.com/neydermarquez/AirPodsCompanion/releases/download/v1.0.2/AirPods-Companion-v1.0.2.apk"><strong>Descargar APK v1.0.2</strong></a>
+  ·
+  <a href="https://github.com/neydermarquez/AirPodsCompanion/releases/latest">Ver publicación</a>
+</p>
+
 ## Qué es
 
-AirPods Companion es una aplicación independiente para Android que reconoce AirPods vinculados o conectados y presenta únicamente la información que Android y el dispositivo hacen disponible. No requiere root, una cuenta de Apple ni modificaciones del sistema.
+AirPods Companion es una aplicación independiente para Android que detecta AirPods vinculados, cercanos o conectados y reúne en una sola interfaz su estado de conexión, batería disponible, audio, actividad y compatibilidad. No requiere root, una cuenta de Apple ni modificaciones del sistema.
 
 La interfaz diferencia los datos actuales, las lecturas antiguas y las funciones que Android no permite controlar. No utiliza valores simulados para aparentar compatibilidad.
 
-La versión actual utiliza una interfaz clara única, con superficies suaves, navegación inferior persistente y estados específicos para permisos, Bluetooth apagado, búsqueda, conexión, reconexión, pérdida de conexión y compatibilidad limitada.
+La versión actual utiliza una interfaz clara única, con representación visual de los auriculares y el estuche, navegación inferior persistente y estados específicos para permisos, Bluetooth apagado, búsqueda, conexión, reconexión, pérdida de conexión y compatibilidad limitada.
+
+## Novedades de v1.0.2
+
+- Inicio renovado con representación visual de los AirPods y el estuche.
+- Flujo simplificado de detección, vinculación y reconexión.
+- Actualización inmediata mediante eventos Bluetooth y comprobación periódica de respaldo.
+- Lecturas de batería separadas únicamente cuando el dispositivo las publica realmente.
+- Actividad y laboratorio local para recopilar evidencia desde el teléfono.
+- Acceso a Buscar en iCloud mediante una pestaña segura administrada por Apple.
+- Capturas y documentación organizadas por versión.
 
 ## Capturas
 
