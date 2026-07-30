@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.media.AudioManager
 import java.lang.reflect.Method
@@ -70,6 +71,23 @@ class HiddenBluetoothCompat(context: Context) {
         return invokeInt(adapter, "getLeConnectionState", device)
     }
 
+    fun connectProfile(profile: BluetoothProfile, device: BluetoothDevice): Boolean {
+        val native = nativeBridge.connectProfile(profile, device)
+        if (native == true) return true
+        return invokeBoolean(profile, "connect", device)
+    }
+
+    fun connectDevice(device: BluetoothDevice): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 37) return false
+        return invokeInt(device, "connect") == 0
+    }
+
+    fun getBatteryLevel(device: BluetoothDevice): Int? {
+        val native = nativeBridge.getBatteryLevel(device)
+        if (native != null && native in 0..100) return native
+        return invokeInt(device, "getBatteryLevel")?.takeIf { it in 0..100 }
+    }
+
     private fun installHiddenApiExemptions() {
         runCatching {
             val bypassClass = Class.forName(HIDDEN_API_BYPASS)
@@ -80,7 +98,8 @@ class HiddenBluetoothCompat(context: Context) {
                 Array<String>::class.java -> arrayOf(
                     BluetoothA2dp::class.java.name,
                     AudioManager::class.java.name,
-                    BluetoothAdapter::class.java.name
+                    BluetoothAdapter::class.java.name,
+                    BluetoothDevice::class.java.name
                 )
                 else -> BluetoothA2dp::class.java.name
             }
@@ -196,6 +215,14 @@ class HiddenBluetoothCompat(context: Context) {
             runCatching { getLeConnectionStateNative(adapter, device) }.getOrNull()
         } else null
 
+        fun connectProfile(profile: BluetoothProfile, device: BluetoothDevice): Boolean? = if (isAvailable) {
+            runCatching { connectProfileNative(profile, device) }.getOrNull()
+        } else null
+
+        fun getBatteryLevel(device: BluetoothDevice): Int? = if (isAvailable) {
+            runCatching { getBatteryLevelNative(device) }.getOrNull()?.takeIf { it in 0..100 }
+        } else null
+
         @JvmStatic
         private external fun getCodecConfigNative(a2dp: BluetoothA2dp): Any?
 
@@ -222,5 +249,11 @@ class HiddenBluetoothCompat(context: Context) {
 
         @JvmStatic
         private external fun getLeConnectionStateNative(adapter: BluetoothAdapter, device: BluetoothDevice): Int
+
+        @JvmStatic
+        private external fun connectProfileNative(profile: BluetoothProfile, device: BluetoothDevice): Boolean
+
+        @JvmStatic
+        private external fun getBatteryLevelNative(device: BluetoothDevice): Int
     }
 }

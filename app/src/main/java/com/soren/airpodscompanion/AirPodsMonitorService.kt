@@ -145,12 +145,13 @@ class AirPodsMonitorService : Service() {
             inspectCurrentCodec(currentAddress)
         }
 
-        val battery = connected?.battery?.combined?.percent
+        val batteryReading = connected?.battery?.let(BluetoothConnectionPolicy::lowestFreshBattery)
+        val battery = batteryReading?.second
         val threshold = NotificationPreferences(this).load().lowBatteryThreshold
         if (battery != null && battery <= threshold && (previousBattery == null || previousBattery!! > threshold)) {
             AirPodsNotifications.event(
                 this, AirPodsNotificationType.LOW_BATTERY,
-                "Batería baja", "${connected.name} tiene $battery% de batería."
+                "Batería baja", "${batteryReading.first.replaceFirstChar(Char::uppercase)}: $battery%."
             )
         }
         previousBattery = battery

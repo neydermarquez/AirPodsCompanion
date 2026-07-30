@@ -45,7 +45,8 @@ data class ProtocolCaptureState(
     val lastCompletedScenario: CaptureScenario? = null,
     val scenariosWithEvidence: Int = 0,
     val reproducibleComparisons: Int = 0,
-    val sessions: List<ProtocolSession> = emptyList()
+    val sessions: List<ProtocolSession> = emptyList(),
+    val sessionCounts: Map<CaptureScenario, Int> = emptyMap()
 )
 
 /**
@@ -62,13 +63,18 @@ class ProtocolCaptureStore(private val context: Context) {
         val active = preferences.string(NAMESPACE, KEY_ACTIVE, null)?.let { runCatching { CaptureScenario.valueOf(it) }.getOrNull() }
         val completed = preferences.string(NAMESPACE, KEY_COMPLETED, null)?.let { runCatching { CaptureScenario.valueOf(it) }.getOrNull() }
         val samples = load()
+        val completedSessions = sessions(samples)
+        val sessionCounts = completedSessions
+            .groupingBy(ProtocolSession::scenario)
+            .eachCount()
         return ProtocolCaptureState(
             active,
             samples.size,
             completed,
-            samples.groupingBy(ProtocolSample::scenario).eachCount().count { it.value >= ProtocolAnalyzer.MIN_REPETITIONS },
+            sessionCounts.count { it.value >= ProtocolAnalyzer.MIN_REPETITIONS },
             ProtocolAnalyzer.reproducibleComparisons(samples).size,
-            sessions(samples)
+            completedSessions,
+            sessionCounts
         )
     }
 

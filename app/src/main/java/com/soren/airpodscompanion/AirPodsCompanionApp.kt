@@ -227,6 +227,11 @@ fun AirPodsCompanionApp() {
             activity.window.isNavigationBarContrastEnforced = false
         }
     }
+    LaunchedEffect(bluetoothState.connectedDevice?.address, selectedProfile, profileSettings) {
+        if (bluetoothState.connectedDevice != null) {
+            mediaControls.setMusicVolumePercent(profileSettings.volumePercent)
+        }
+    }
     AirPodsCompanionTheme {
         var showBrandIntro by remember { mutableStateOf(true) }
         LaunchedEffect(Unit) {
@@ -252,27 +257,29 @@ fun AirPodsCompanionApp() {
                 onProfile = {
                     appViewModel.selectProfile(it)
                     val settings = profileStore.settings(it)
+                    appViewModel.updateNotifications(
+                        notificationSettings.copy(
+                            connection = settings.connectionNotifications,
+                            disconnection = settings.disconnectionNotifications,
+                            lowBattery = settings.lowBatteryNotifications
+                        )
+                    )
                     if (bluetoothState.connectedDevice != null) {
                         mediaControls.setMusicVolumePercent(settings.volumePercent)
                     }
-                    val notifications = notificationSettings.copy(
-                        connection = settings.connectionNotifications,
-                        disconnection = settings.disconnectionNotifications,
-                        lowBattery = settings.lowBatteryNotifications
-                    )
-                    appViewModel.updateNotifications(notifications)
                 },
                 onProfileSettings = {
                     appViewModel.updateProfile(it)
+                    appViewModel.updateNotifications(
+                        notificationSettings.copy(
+                            connection = it.connectionNotifications,
+                            disconnection = it.disconnectionNotifications,
+                            lowBattery = it.lowBatteryNotifications
+                        )
+                    )
                     if (bluetoothState.connectedDevice != null) {
                         mediaControls.setMusicVolumePercent(it.volumePercent)
                     }
-                    val notifications = notificationSettings.copy(
-                        connection = it.connectionNotifications,
-                        disconnection = it.disconnectionNotifications,
-                        lowBattery = it.lowBatteryNotifications
-                    )
-                    appViewModel.updateNotifications(notifications)
                 },
                 onStartCapture = controller::startProtocolCapture,
                 onStopCapture = controller::stopProtocolCapture,
@@ -494,10 +501,7 @@ private fun AppShell(
                         HomeScreen(
                             bluetoothState,
                             monitorStatus,
-                            monitoringEnabled,
-                            onPermission,
-                            onEnableBluetooth,
-                            onScan
+                            monitoringEnabled
                         )
                     }
                     composable(AppDestination.DEVICES.route) {
@@ -520,19 +524,18 @@ private fun AppShell(
                         onCompareProtocolSession,
                         onExportProtocolSession,
                         retentionSettings,
-                        onRetentionSettings
+                        onRetentionSettings,
+                        bluetoothState.protocolCapture,
+                        onStartCapture,
+                        onStopCapture
                         )
                     }
                     composable(AppDestination.SETTINGS.route) {
                         SettingsScreen(
-                        diagnostics,
                         selectedProfile,
                         profileSettings,
                         onProfile,
                         onProfileSettings,
-                        bluetoothState.protocolCapture,
-                        onStartCapture,
-                        onStopCapture,
                         startAfterReboot,
                         onStartAfterReboot,
                         monitoringEnabled,
@@ -594,17 +597,30 @@ private data class ConnectionPopupModel(
 ) {
     companion object {
         fun connected(device: AirPodsDevice): ConnectionPopupModel {
-            val battery = device.battery.combined
+            val components = listOfNotNull(
+                device.battery.left.percent?.let { "L $it%" },
+                device.battery.right.percent?.let { "R $it%" },
+                device.battery.case.percent?.let { "Estuche $it%" }
+            )
+            val componentFresh = device.battery.left.isFresh() ||
+                device.battery.right.isFresh() ||
+                device.battery.case.isFresh()
+            val combined = device.battery.combined
             return ConnectionPopupModel(
                 kind = ConnectionPopupKind.CONNECTED,
                 title = device.name,
                 detail = when {
-                    battery.isFresh() -> "Conectados y listos"
-                    battery.percent != null -> "Conectados · batería de una lectura anterior"
+                    componentFresh || combined.isFresh() -> "Conectados y listos"
+                    components.isNotEmpty() || combined.percent != null ->
+                        "Conectados · batería de una lectura anterior"
                     else -> "Conectados · batería no publicada"
                 },
-                battery = battery.percent?.let {
-                    if (battery.isFresh()) "$it%" else "Última lectura $it%"
+                battery = when {
+                    components.isNotEmpty() -> components.joinToString(" · ")
+                    combined.percent != null ->
+                        if (combined.isFresh()) "${combined.percent}%"
+                        else "Última lectura ${combined.percent}%"
+                    else -> null
                 }
             )
         }
@@ -761,16 +777,13 @@ private fun TopBar() {
 private fun HomeScreen(
     state: BluetoothUiState,
     monitorStatus: MonitorStatus,
-    monitoringEnabled: Boolean,
-    onPermission: () -> Unit,
-    onEnableBluetooth: () -> Unit,
-    onScan: () -> Unit
+    monitoringEnabled: Boolean
 ) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        HomeDeviceHero(state, onPermission, onEnableBluetooth, onScan)
+        HomeDeviceHero(state)
         SectionHeader("Accesos rápidos", "Esenciales")
         HomeEssentials(monitorStatus, monitoringEnabled)
         Spacer(Modifier.height(96.dp))
@@ -778,47 +791,30 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun HomeDeviceHero(
-    state: BluetoothUiState,
-    onPermission: () -> Unit,
-    onEnableBluetooth: () -> Unit,
-    onScan: () -> Unit
-) {
+private fun HomeDeviceHero(state: BluetoothUiState) {
     val device = state.connectedDevice
     val connected = device != null
     val statusTitle = when (state.status) {
-        BluetoothStatus.PERMISSION_REQUIRED -> "Permiso necesario"
-        BluetoothStatus.DISABLED -> "Bluetooth apagado"
+        BluetoothStatus.PERMISSION_REQUIRED -> "Requiere atención"
+        BluetoothStatus.DISABLED -> "Requiere atención"
         BluetoothStatus.UNSUPPORTED -> "Bluetooth no disponible"
         BluetoothStatus.PAIRING -> "Emparejando"
         BluetoothStatus.RECONNECTING -> "Reconectando"
         BluetoothStatus.CONNECTED -> "Conectados"
-        BluetoothStatus.ERROR -> "No se pudo buscar"
-        BluetoothStatus.READY -> "Listos para conectar"
-        BluetoothStatus.SEARCHING -> "Buscando"
+        BluetoothStatus.ERROR -> "Requiere atención"
+        BluetoothStatus.READY -> "Sin conexión"
+        BluetoothStatus.SEARCHING -> "Detección activa"
     }
     val statusDetail = when (state.status) {
-        BluetoothStatus.PERMISSION_REQUIRED -> "Autoriza dispositivos cercanos"
-        BluetoothStatus.DISABLED -> "Activa Bluetooth para continuar"
+        BluetoothStatus.PERMISSION_REQUIRED -> "Continúa desde Dispositivos"
+        BluetoothStatus.DISABLED -> "Continúa desde Dispositivos"
         BluetoothStatus.UNSUPPORTED -> "Este teléfono no ofrece Bluetooth compatible"
         BluetoothStatus.PAIRING -> "Confirma la solicitud de Android"
         BluetoothStatus.RECONNECTING -> "Restaurando la conexión de audio"
         BluetoothStatus.CONNECTED -> device?.identifiedModel ?: "Audio Bluetooth activo"
-        BluetoothStatus.ERROR -> state.error ?: "Vuelve a intentarlo"
-        BluetoothStatus.READY -> "Abre el estuche y mantenlo cerca"
+        BluetoothStatus.ERROR -> "Revisa la conexión en Dispositivos"
+        BluetoothStatus.READY -> "La conexión se gestiona en Dispositivos"
         BluetoothStatus.SEARCHING -> "Detección automática en curso"
-    }
-    val actionLabel = when (state.status) {
-        BluetoothStatus.PERMISSION_REQUIRED -> "Autorizar"
-        BluetoothStatus.DISABLED -> "Activar Bluetooth"
-        BluetoothStatus.READY, BluetoothStatus.ERROR -> "Buscar ahora"
-        else -> null
-    }
-    val action = when (state.status) {
-        BluetoothStatus.PERMISSION_REQUIRED -> onPermission
-        BluetoothStatus.DISABLED -> onEnableBluetooth
-        BluetoothStatus.READY, BluetoothStatus.ERROR -> onScan
-        else -> null
     }
 
     Surface(
@@ -926,26 +922,6 @@ private fun HomeDeviceHero(
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 2.dp
                 )
-            } else if (action != null && actionLabel != null) {
-                Spacer(Modifier.height(18.dp))
-                Surface(
-                    Modifier.fillMaxWidth().sizeIn(minHeight = 48.dp)
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = actionLabel
-                        }
-                        .clickable(onClick = action),
-                    shape = RoundedCornerShape(15.dp),
-                    color = MaterialTheme.colorScheme.primary
-                ) {
-                    Text(
-                        actionLabel,
-                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
         }
     }
@@ -1176,7 +1152,6 @@ private fun DevicesScreen(
         }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        SectionHeader("Dispositivos", "Detección automática")
         DeviceDiscoveryPanel(state, onPermission, onEnableBluetooth, onScan)
         val available = state.devices.filterNot { it.connected }
         if (available.isNotEmpty()) {
@@ -1199,30 +1174,6 @@ private fun DevicesScreen(
             }
             SectionHeader("Funciones del modelo", "Compatibilidad completa")
             ConnectedFeatureInventory(connectedDevice)
-        }
-        if (connectedDevice == null) {
-            SectionHeader("Conexión sencilla", "Sin pasos innecesarios")
-            ConnectionGuide()
-        }
-        if (connectedDevice == null) AcrylicCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.Icon(
-                    Icons.Outlined.Shield,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(21.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("Controles solo cuando correspondan", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        "Batería, audio y gestos aparecerán únicamente al reconocer un dispositivo compatible.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
         Spacer(Modifier.height(96.dp))
     }
@@ -1581,6 +1532,7 @@ private fun MediaControl(
 
 @Composable
 private fun DeviceDiscoveryPanel(state: BluetoothUiState, onPermission: () -> Unit, onEnableBluetooth: () -> Unit, onScan: () -> Unit) {
+    val context = LocalContext.current
     val action = when (state.status) {
         BluetoothStatus.PERMISSION_REQUIRED -> onPermission
         BluetoothStatus.DISABLED -> onEnableBluetooth
@@ -1622,6 +1574,14 @@ private fun DeviceDiscoveryPanel(state: BluetoothUiState, onPermission: () -> Un
                 modifier = Modifier.size(20.dp),
                 color = MaterialTheme.colorScheme.primary,
                 strokeWidth = 2.dp
+            )
+        }
+        if (state.status == BluetoothStatus.ERROR && !state.error.isNullOrBlank()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                state.error,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
             )
         }
         if (action != null) {
@@ -1725,8 +1685,42 @@ private fun DeviceDiscoveryPanel(state: BluetoothUiState, onPermission: () -> Un
             DiscoveryLine(Icons.Outlined.Bluetooth, "Vinculados por Bluetooth", "Reconocimiento automático")
             HorizontalDivider(Modifier.padding(start = 33.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             DiscoveryLine(Icons.Outlined.Timeline, "AirPods cercanos", "Detección al abrir el estuche")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            Text(
+                "Para que aparezcan, activa el modo de enlace hasta que el indicador del estuche parpadee en blanco.",
+                modifier = Modifier.padding(top = 14.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (state.status in listOf(
+                    BluetoothStatus.SEARCHING,
+                    BluetoothStatus.READY,
+                    BluetoothStatus.ERROR
+                )
+            ) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Abrir Bluetooth",
+                    modifier = Modifier.fillMaxWidth()
+                        .sizeIn(minHeight = 48.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Abrir emparejamiento Bluetooth de Android"
+                        }
+                        .clickable { openBluetoothPairingSettings(context) }
+                        .padding(vertical = 14.dp),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
+}
+
+private fun openBluetoothPairingSettings(context: android.content.Context) {
+    runCatching { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
+        .recoverCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
 }
 
 private fun batteryEvidenceDescription(device: AirPodsDevice): String {
@@ -1801,42 +1795,6 @@ private fun DiscoveryLine(
 }
 
 @Composable
-private fun ConnectionGuide() {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
-    ) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            GuideRow("1", "Activa Bluetooth", "La detección comenzará automáticamente")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            GuideRow("2", "Abre el estuche", "Mantén los AirPods cerca del teléfono")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            GuideRow("3", "Continúa aquí", "El dispositivo aparecerá cuando esté disponible")
-        }
-    }
-}
-
-@Composable
-private fun GuideRow(step: String, title: String, detail: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            step,
-            modifier = Modifier.width(28.dp),
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.width(10.dp))
-        Column {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
 private fun ActivityScreen(
     state: BluetoothUiState,
     onClearHistory: () -> Unit,
@@ -1844,13 +1802,27 @@ private fun ActivityScreen(
     onCompareProtocolSession: (String) -> List<ScenarioComparison>,
     onExportProtocolSession: (ProtocolSession) -> Unit,
     retentionSettings: HistoryRetentionSettings,
-    onRetentionSettings: (HistoryRetentionSettings) -> Unit
+    onRetentionSettings: (HistoryRetentionSettings) -> Unit,
+    captureState: ProtocolCaptureState,
+    onStartCapture: (CaptureScenario) -> Unit,
+    onStopCapture: () -> Unit
 ) {
     var exportCandidate by remember { mutableStateOf<ProtocolSession?>(null) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        SectionHeader("Actividad", "Historial real")
-        if (state.history.isEmpty()) ActivityEmptyState(state) else ActivityHistory(state.history, onClearHistory)
-        SectionHeader("Laboratorio", "Sesiones separadas")
+        if (state.history.isEmpty()) {
+            ActivityEmptyState(state)
+            SectionHeader("Eventos compatibles", "Registro automático")
+            ActivityEventGroup()
+        } else {
+            ActivityHistory(state.history, onClearHistory)
+        }
+        SectionHeader("Laboratorio", "Captura y sesiones")
+        ProtocolCaptureCard(
+            state = captureState,
+            connected = state.connectedDevice != null,
+            onStart = onStartCapture,
+            onStop = onStopCapture
+        )
         ProtocolSessionsCard(
             state.protocolCapture.sessions,
             onDeleteProtocolSession,
@@ -1859,28 +1831,6 @@ private fun ActivityScreen(
         )
         SectionHeader("Conservación", "Control local")
         RetentionCard(retentionSettings, onRetentionSettings)
-        SectionHeader("Qué se registrará", "Al conectar")
-        ActivityEventGroup()
-        AcrylicCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.Icon(
-                    Icons.Outlined.Shield,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(21.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("Historial privado", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        "La actividad permanecerá en este dispositivo y no incluirá eventos simulados.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
         Spacer(Modifier.height(96.dp))
     }
     exportCandidate?.let { session ->
@@ -2078,6 +2028,7 @@ private fun nextRetentionDays(current: Int): Int =
 
 @Composable
 private fun ActivityHistory(events: List<ConnectionEvent>, onClear: () -> Unit) {
+    val groupedEvents = remember(events) { groupConsecutiveHistoryEvents(events).take(20) }
     Surface(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -2085,7 +2036,8 @@ private fun ActivityHistory(events: List<ConnectionEvent>, onClear: () -> Unit) 
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
     ) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            events.take(20).forEachIndexed { index, event ->
+            groupedEvents.forEachIndexed { index, group ->
+                val event = group.event
                 Row(Modifier.fillMaxWidth().padding(vertical = 13.dp), verticalAlignment = Alignment.Top) {
                     androidx.compose.material3.Icon(
                         when (event.type) {
@@ -2103,7 +2055,21 @@ private fun ActivityHistory(events: List<ConnectionEvent>, onClear: () -> Unit) 
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(historyTitle(event.type), fontWeight = FontWeight.SemiBold)
+                            Row(
+                                Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(historyTitle(event.type), fontWeight = FontWeight.SemiBold)
+                                if (group.count > 1) {
+                                    Text(
+                                        "×${group.count}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                             Text(
                                 DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(event.timestamp)),
                                 style = MaterialTheme.typography.labelSmall,
@@ -2114,7 +2080,7 @@ private fun ActivityHistory(events: List<ConnectionEvent>, onClear: () -> Unit) 
                         Text(event.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (index < events.take(20).lastIndex) {
+                if (index < groupedEvents.lastIndex) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
                 }
             }
@@ -2131,6 +2097,24 @@ private fun ActivityHistory(events: List<ConnectionEvent>, onClear: () -> Unit) 
     }
 }
 
+private data class HistoryEventGroup(val event: ConnectionEvent, val count: Int)
+
+private fun groupConsecutiveHistoryEvents(events: List<ConnectionEvent>): List<HistoryEventGroup> =
+    events.fold(mutableListOf<HistoryEventGroup>()) { groups, event ->
+        val previous = groups.lastOrNull()
+        if (
+            previous != null &&
+            previous.event.type == event.type &&
+            previous.event.deviceName == event.deviceName &&
+            previous.event.detail == event.detail
+        ) {
+            groups[groups.lastIndex] = previous.copy(count = previous.count + 1)
+        } else {
+            groups += HistoryEventGroup(event, 1)
+        }
+        groups
+    }
+
 private fun historyTitle(type: ConnectionEventType): String = when (type) {
     ConnectionEventType.CONNECTED -> "Conectado"
     ConnectionEventType.DISCONNECTED -> "Desconectado"
@@ -2143,14 +2127,10 @@ private fun historyTitle(type: ConnectionEventType): String = when (type) {
 
 @Composable
 private fun SettingsScreen(
-    diagnostics: AudioDiagnostics,
     selectedProfile: ListeningProfile,
     profileSettings: ListeningProfileSettings,
     onProfile: (ListeningProfile) -> Unit,
     onProfileSettings: (ListeningProfileSettings) -> Unit,
-    captureState: ProtocolCaptureState,
-    onStartCapture: (CaptureScenario) -> Unit,
-    onStopCapture: () -> Unit,
     startAfterReboot: Boolean,
     onStartAfterReboot: (Boolean) -> Unit,
     monitoringEnabled: Boolean,
@@ -2169,9 +2149,7 @@ private fun SettingsScreen(
     onExportAllData: () -> Unit,
     onDeleteAllData: () -> Unit
 ) {
-    var diagnosticState by remember { mutableStateOf(diagnostics.inspect()) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        SectionHeader("Ajustes", "Preferencias")
         SectionHeader("Aplicación", "Control y privacidad")
         PreferencesGroup(
             startAfterReboot,
@@ -2190,73 +2168,22 @@ private fun SettingsScreen(
             companionMessage,
             onCompanionAssociation
         )
-        SectionHeader("Servicios de Apple", "Acceso seguro")
-        ICloudFindCard()
         SectionHeader("Privacidad", "Tus datos")
         PrivacySection(onExportAllData, onDeleteAllData)
         SectionHeader("Perfil", "Preferencia local")
         ProfileSelector(selectedProfile, profileSettings, onProfile, onProfileSettings)
-        SectionHeader("Diagnóstico de audio", "Estado publicado por Android")
-        AudioDiagnosticCard(diagnosticState, profileSettings) {
-            diagnostics.toggleMicrophone()
-            diagnosticState = diagnostics.inspect()
-        }
-        SectionHeader("Laboratorio", "Evidencia local")
-        ProtocolCaptureCard(captureState, onStartCapture, onStopCapture)
-        SectionHeader("Compatibilidad", "Limitaciones de Android")
-        CompatibilityGroup()
         Spacer(Modifier.height(96.dp))
-    }
-}
-
-@Composable
-private fun ICloudFindCard() {
-    val context = LocalContext.current
-    var launchError by remember { mutableStateOf(false) }
-
-    AcrylicCard {
-        SettingLikeRow(
-            icon = Icons.Outlined.LocationOn,
-            title = "Buscar en iCloud",
-            detail = "Localiza tus AirPods mediante el servicio oficial de Apple",
-            status = "Abrir",
-            onClick = {
-                launchError = !ICloudFindLauncher.open(context)
-            }
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-        Row(
-            Modifier.padding(top = 13.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            androidx.compose.material3.Icon(
-                Icons.Outlined.Shield,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(17.dp)
-            )
-            Spacer(Modifier.width(9.dp))
-            Text(
-                if (launchError) {
-                    "No hay un navegador compatible con pestañas seguras. Instala o actualiza tu navegador e inténtalo nuevamente."
-                } else {
-                    "Apple administra el inicio de sesión dentro de una pestaña segura. " +
-                        "AirPods Companion no puede leer contraseñas, cookies, códigos ni ubicaciones."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (launchError) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 
 @Composable
 private fun ProtocolCaptureCard(
     state: ProtocolCaptureState,
+    connected: Boolean,
     onStart: (CaptureScenario) -> Unit,
     onStop: () -> Unit
 ) {
+    var pendingScenario by remember { mutableStateOf<CaptureScenario?>(null) }
     Surface(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -2265,30 +2192,44 @@ private fun ProtocolCaptureCard(
     ) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             Text(
-                "Registra durante 15 segundos señales Bluetooth observables, sin guardar direcciones del dispositivo.",
+                if (connected) {
+                    "Pruebas guiadas en este teléfono. Cada captura dura 15 segundos y no guarda direcciones del dispositivo."
+                } else {
+                    "Conecta tus AirPods para ejecutar pruebas locales desde este teléfono."
+                },
                 modifier = Modifier.padding(top = 15.dp, bottom = 8.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             CaptureScenario.entries.forEach { scenario ->
                 val active = state.activeScenario == scenario
+                val sessionCount = state.sessionCounts[scenario] ?: 0
                 Row(
                     Modifier.fillMaxWidth()
-                        .clickable(enabled = state.activeScenario == null || active) {
-                            if (active) onStop() else onStart(scenario)
+                        .clickable(enabled = connected && (state.activeScenario == null || active)) {
+                            if (active) onStop() else pendingScenario = scenario
                         }
                         .padding(vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(scenario.title, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    Column(Modifier.weight(1f)) {
+                        Text(scenario.title, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "${sessionCount.coerceAtMost(ProtocolAnalyzer.MIN_REPETITIONS)}/${ProtocolAnalyzer.MIN_REPETITIONS} pruebas independientes",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
                         when {
                             active -> "Detener"
                             state.activeScenario != null -> "En espera"
-                            else -> "Capturar"
+                            !connected -> "Conecta primero"
+                            sessionCount >= ProtocolAnalyzer.MIN_REPETITIONS -> "Repetir"
+                            else -> "Probar"
                         },
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (state.activeScenario == null || active) MaterialTheme.colorScheme.primary
+                        color = if (connected && (state.activeScenario == null || active)) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -2297,7 +2238,7 @@ private fun ProtocolCaptureCard(
             Text(
                 "${state.sampleCount} muestras locales" +
                     (state.lastCompletedScenario?.let { " · Última: ${it.title}" } ?: "") +
-                    "\n${state.scenariosWithEvidence} escenarios con 3+ muestras · " +
+                    "\n${state.scenariosWithEvidence} escenarios con 3 pruebas independientes · " +
                     "${state.reproducibleComparisons} comparaciones reproducibles",
                 modifier = Modifier.padding(vertical = 13.dp),
                 style = MaterialTheme.typography.labelSmall,
@@ -2305,6 +2246,60 @@ private fun ProtocolCaptureCard(
             )
         }
     }
+    pendingScenario?.let { scenario ->
+        AlertDialog(
+            onDismissRequest = { pendingScenario = null },
+            title = { Text("Probar ${scenario.title.lowercase()}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(captureInstruction(scenario))
+                    Text(
+                        "Después de pulsar “Iniciar”, realiza la acción inmediatamente y mantén ese estado hasta que la captura termine.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Necesitamos tres capturas independientes. La app comparará los resultados localmente.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingScenario = null
+                        onStart(scenario)
+                    }
+                ) {
+                    Text("Iniciar en este teléfono")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingScenario = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+private fun captureInstruction(scenario: CaptureScenario): String = when (scenario) {
+    CaptureScenario.ANC ->
+        "Deja primero otro modo activo. Al iniciar, cambia los AirPods a Cancelación de ruido."
+    CaptureScenario.TRANSPARENCY ->
+        "Deja primero otro modo activo. Al iniciar, cambia los AirPods a Transparencia."
+    CaptureScenario.ADAPTIVE ->
+        "Deja primero otro modo activo. Al iniciar, cambia los AirPods a Audio adaptativo."
+    CaptureScenario.LEFT_EAR ->
+        "Deja el auricular izquierdo fuera del oído. Al iniciar, colócalo y no muevas el derecho."
+    CaptureScenario.RIGHT_EAR ->
+        "Deja el auricular derecho fuera del oído. Al iniciar, colócalo y no muevas el izquierdo."
+    CaptureScenario.CASE_OPEN ->
+        "Mantén el estuche cerrado cerca del teléfono. Al iniciar, ábrelo y déjalo abierto."
+    CaptureScenario.CHARGING ->
+        "Mantén el estuche sin alimentación. Al iniciar, conecta el cable o colócalo en el cargador."
+    CaptureScenario.GESTURE ->
+        "No pulses ningún control antes de comenzar. Al iniciar, realiza una sola vez el gesto que quieres comprobar."
 }
 
 @Composable
@@ -2343,12 +2338,7 @@ private fun ProfileSelector(
             Column(Modifier.padding(vertical = 14.dp)) {
                 Text("Perfil activo: ${selected.title}", fontWeight = FontWeight.Bold)
                 Text(
-                    "${settings.volumePercent}% de volumen · " +
-                        listOfNotNull(
-                            "conexión".takeIf { settings.connectionNotifications },
-                            "desconexión".takeIf { settings.disconnectionNotifications },
-                            "batería baja".takeIf { settings.lowBatteryNotifications }
-                        ).joinToString(", ").ifEmpty { "sin avisos de evento" },
+                    "${settings.volumePercent}% de volumen. Los avisos se administran en Aplicación.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2376,96 +2366,6 @@ private fun ProfileSelector(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
-                }
-                ProfileToggle("Avisar al conectar", settings.connectionNotifications) {
-                    onSettings(settings.copy(connectionNotifications = it))
-                }
-                ProfileToggle("Avisar al desconectar", settings.disconnectionNotifications) {
-                    onSettings(settings.copy(disconnectionNotifications = it))
-                }
-                ProfileToggle("Avisar por batería baja", settings.lowBatteryNotifications) {
-                    onSettings(settings.copy(lowBatteryNotifications = it))
-                }
-                Text(
-                    "Diagnóstico visible",
-                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                    fontWeight = FontWeight.SemiBold
-                )
-                ProfileToggle("Salida Bluetooth", settings.showOutputDiagnostics) {
-                    onSettings(settings.copy(showOutputDiagnostics = it))
-                }
-                ProfileToggle("Micrófono y llamadas", settings.showMicrophoneDiagnostics) {
-                    onSettings(settings.copy(showMicrophoneDiagnostics = it))
-                }
-                ProfileToggle("Audio espacial", settings.showSpatialDiagnostics) {
-                    onSettings(settings.copy(showSpatialDiagnostics = it))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileToggle(title: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable { onChecked(!checked) }.padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChecked)
-    }
-}
-
-@Composable
-private fun AudioDiagnosticCard(
-    state: AudioDiagnosticState,
-    settings: ListeningProfileSettings,
-    onToggleMic: () -> Unit
-) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
-    ) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            if (settings.showOutputDiagnostics) {
-                CompatibilityLine("Salida Bluetooth", if (state.bluetoothOutput) "Disponible" else "No detectada")
-            }
-            if (settings.showSpatialDiagnostics) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-                CompatibilityLine(
-                    "Audio espacial de Android",
-                    when {
-                        !state.spatialAudioSupported -> "No compatible"
-                        state.spatialAudioEnabled && state.spatialAudioAvailable -> "Activo"
-                        state.spatialAudioAvailable -> "Disponible"
-                        else -> "No disponible en esta ruta"
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-                CompatibilityLine("Seguimiento de cabeza", if (state.headTrackerAvailable) "Detectado" else "No publicado")
-            }
-            if (settings.showMicrophoneDiagnostics) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-                CompatibilityLine("Micrófono Bluetooth", if (state.bluetoothMicrophone) "Disponible" else "No detectado")
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-                Row(
-                Modifier.fillMaxWidth()
-                    .clickable(enabled = state.callActive && state.bluetoothMicrophone, onClick = onToggleMic)
-                    .padding(vertical = 15.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                Text("Micrófono en llamada", fontWeight = FontWeight.SemiBold)
-                Text(
-                    when {
-                        !state.callActive -> "Sin llamada activa"
-                        state.microphoneMuted -> "Silenciado"
-                        else -> "Activo"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (state.callActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 }
             }
         }
@@ -2563,8 +2463,6 @@ private fun PreferencesGroup(
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
     ) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-        SettingLikeRow(Icons.Outlined.Shield, "Privacidad", "Procesamiento local y control de tus datos", "Incluido")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             NotificationSettingRow(
                 "Avisar al conectar",
                 notificationSettings.connection
@@ -2650,15 +2548,6 @@ private fun PreferencesGroup(
                 onClick = if (companionSupported && !companionAssociated) onCompanionAssociation else null
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            SettingLikeRow(
-                Icons.Outlined.Shield,
-                manufacturerGuidance.title,
-                if (backgroundRestricted) {
-                    "Android restringió la actividad en segundo plano. ${manufacturerGuidance.detail}"
-                } else manufacturerGuidance.detail,
-                if (backgroundRestricted) "Restringida" else manufacturerGuidance.manufacturer
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             Row(
                 Modifier.fillMaxWidth().clickable { onStartAfterReboot(!startAfterReboot) }.padding(vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -2683,8 +2572,18 @@ private fun PreferencesGroup(
             SettingLikeRow(
                 Icons.Outlined.Settings,
                 "Optimización de batería",
-                if (batteryOptimizationDisabled) "Sin restricciones del sistema" else "Android puede limitar la supervisión",
-                if (batteryOptimizationDisabled) "Correcto" else "Revisar",
+                when {
+                    backgroundRestricted ->
+                        "Android restringió la app. ${manufacturerGuidance.detail}"
+                    batteryOptimizationDisabled ->
+                        "Sin restricciones del sistema"
+                    else -> manufacturerGuidance.detail
+                },
+                when {
+                    backgroundRestricted -> "Restringida"
+                    batteryOptimizationDisabled -> "Correcto"
+                    else -> "Revisar"
+                },
                 onClick = onBatteryOptimization
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
@@ -2701,24 +2600,6 @@ private fun NotificationSettingRow(title: String, checked: Boolean, onChecked: (
     ) {
         Text(title, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
         androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChecked)
-    }
-}
-
-@Composable
-private fun CompatibilityGroup() {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
-    ) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            CompatibilityLine("Audio espacial", "Según Android")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            CompatibilityLine("ANC y Transparencia", "Control físico")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            CompatibilityLine("Buscar", "No disponible")
-        }
     }
 }
 

@@ -10,13 +10,13 @@ La referencia documental actual es `v1.0.1` (`versionCode` 2, commit `f33707f`).
 
 | Requisito | Implementación | Estado |
 |---|---|---|
-| Detección y reconexión | Bluetooth Classic, dispositivos vinculados, A2DP/HFP y reconexión supervisada | Implementado |
-| Emparejamiento | Solicitud pública `createBond` y continuación en Android | Implementado |
+| Detección y reconexión | Bluetooth Classic, nombres publicados tardíamente, dispositivos conocidos renombrados, A2DP/HFP y reconexión supervisada | Implementado |
+| Emparejamiento | Solicitud pública `createBond`, intento de perfiles de audio y acceso guiado a Bluetooth del sistema cuando Android bloquea la conexión directa | Implementado |
 | Modelo | Identificación conservadora a partir del nombre publicado | Implementado con limitaciones |
 | Conexión y desconexión | Perfiles A2DP/HFP, historial, ventana y notificaciones | Implementado |
-| Auriculares y estuche | Lecturas separadas solo cuando existe señal confirmada | Implementado con evidencia |
-| Estado de carga | Visible únicamente cuando la señal lo publica | Implementado con evidencia |
-| Batería general | Eventos HFP públicos y caducidad de lectura | Implementado |
+| Auriculares y estuche | Modelo de datos, interfaz, persistencia y fusión sin sobrescritura; adquisición solo si llega una señal observable permitida | Presentación implementada; adquisición dependiente del teléfono/modelo |
+| Estado de carga | Visible únicamente cuando una señal observable lo publica | Presentación implementada; adquisición dependiente del teléfono/modelo |
+| Batería general | Eventos HFP, evento de batería de Android, consulta de respaldo cada 15 s, caducidad y deduplicación | Implementado |
 | Último estado | Snapshot local, historial y widget | Implementado |
 | Errores | Centro de errores e historial persistente | Implementado |
 | Bajo consumo | Se muestra como no disponible para control desde Android | Documentado |
@@ -70,9 +70,9 @@ Los estados detectables solo se elevan cuando el laboratorio acumula comparacion
 |---|---|---|
 | Ventana de conexión | Estados conectado, reconectando y perdido | Implementado |
 | Widget | Automático, compacto y ampliado | Implementado |
-| Notificaciones | Conexión, desconexión, batería y reconexión | Implementado |
+| Notificaciones | Conexión, desconexión, batería y reconexión; batería baja usa el componente real más bajo y vigente | Implementado |
 | Información por modelo | Modelo, confianza, batería, audio y 41 capacidades | Implementado |
-| Preferencias | Perfil, avisos, supervisión, retención y privacidad | Implementado |
+| Preferencias | Perfil, volumen y avisos aplicados al seleccionar; supervisión, retención y privacidad | Implementado |
 | Nombre y vínculo | Acceso directo a Ajustes Bluetooth, propietario del dato | Implementado |
 | Accesibilidad | Semántica, áreas táctiles, texto ampliado y anuncios | Implementado |
 | Privacidad | Procesamiento local, exportación y borrado | Implementado |
@@ -95,6 +95,9 @@ La aplicación puede abrir el sitio oficial de Buscar dentro de una pestaña seg
 
 ## Validación pendiente de hardware
 
+- Ejecutar las capturas funcionales principales desde el laboratorio integrado, sin depender de ADB.
+- Verificar qué teléfonos publican el evento general de batería y con qué latencia.
+- Comprobar si alguna implementación de fabricante expone señales observables separadas sin `BLUETOOTH_PRIVILEGED`.
 - Confirmar en teléfono físico qué llamadas del puente nativo siguen permitidas por fabricante y versión de Android.
 - Confirmar batería por generación y teléfono.
 - Confirmar señales de carga.

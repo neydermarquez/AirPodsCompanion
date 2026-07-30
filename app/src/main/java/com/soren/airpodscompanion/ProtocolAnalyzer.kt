@@ -27,18 +27,25 @@ object ProtocolAnalyzer {
             .map(ProtocolSample::source)
             .distinct()
         return sources.mapNotNull { source ->
-            val firstPayloads = samples.payloads(first, source)
-            val secondPayloads = samples.payloads(second, source)
-            if (firstPayloads.isEmpty() || secondPayloads.isEmpty()) return@mapNotNull null
-            val commonSize = (firstPayloads + secondPayloads).minOf(ByteArray::size)
+            val firstSessions = samples.payloadsBySession(first, source)
+            val secondSessions = samples.payloadsBySession(second, source)
+            if (firstSessions.isEmpty() || secondSessions.isEmpty()) return@mapNotNull null
+            val allPayloads = (firstSessions.values + secondSessions.values).flatten()
+            val commonSize = allPayloads.minOf(ByteArray::size)
             val differences = (0 until commonSize).mapNotNull { index ->
-                val firstValues = firstPayloads.map { it[index].toInt() and 0xFF }.distinct()
-                val secondValues = secondPayloads.map { it[index].toInt() and 0xFF }.distinct()
+                val firstValues = firstSessions.values
+                    .flatten()
+                    .map { it[index].toInt() and 0xFF }
+                    .distinct()
+                val secondValues = secondSessions.values
+                    .flatten()
+                    .map { it[index].toInt() and 0xFF }
+                    .distinct()
                 if (firstValues.size == 1 && secondValues.size == 1 && firstValues.single() != secondValues.single()) {
                     StableByte(index, firstValues.single(), secondValues.single())
                 } else null
             }
-            val repetitions = minOf(firstPayloads.size, secondPayloads.size)
+            val repetitions = minOf(firstSessions.size, secondSessions.size)
             ScenarioComparison(
                 first,
                 second,
@@ -55,9 +62,14 @@ object ProtocolAnalyzer {
             CaptureScenario.entries.drop(index + 1).flatMap { second -> compare(samples, first, second) }
         }.filter(ScenarioComparison::reproducible)
 
-    private fun List<ProtocolSample>.payloads(scenario: CaptureScenario, source: String): List<ByteArray> =
+    private fun List<ProtocolSample>.payloadsBySession(
+        scenario: CaptureScenario,
+        source: String
+    ): Map<String, List<ByteArray>> =
         filter { it.scenario == scenario && it.source == source }
-            .mapNotNull { it.payload.hexToBytesOrNull() }
+            .groupBy(ProtocolSample::sessionId)
+            .mapValues { (_, samples) -> samples.mapNotNull { it.payload.hexToBytesOrNull() } }
+            .filterValues { it.isNotEmpty() }
 
     private fun String.hexToBytesOrNull(): ByteArray? {
         val normalized = filterNot(Char::isWhitespace)

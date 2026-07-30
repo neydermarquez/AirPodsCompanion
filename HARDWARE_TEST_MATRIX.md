@@ -50,7 +50,14 @@ Repetir cada escenario tres veces:
 7. Auricular derecho cargando.
 8. Transición por debajo de 20 %.
 
-Confirmar qué componentes publica Android y si el valor se repite después de desconectar y reconectar.
+Confirmar qué componentes publica Android y si el valor se repite después de desconectar y reconectar. Registrar además:
+
+- Si el cambio llegó mediante evento HFP o mediante el nivel general de la pila Bluetooth.
+- Tiempo transcurrido entre el cambio físico y la actualización de la app.
+- Resultado antes y después del sondeo de respaldo de 15 segundos.
+- Que una lectura general posterior no borre izquierda, derecha o estuche ya observados.
+- Que una lectura con más de 10 minutos aparezca como anterior y no como actual.
+- Que la alerta de batería baja use el componente vigente con menor porcentaje.
 
 ## Audio y llamadas
 
@@ -60,6 +67,8 @@ Confirmar qué componentes publica Android y si el valor se repite después de d
 4. Entrada de micrófono Bluetooth.
 5. Silenciar y reactivar durante una llamada real.
 6. Regreso correcto al audio multimedia al finalizar.
+7. Cambiar entre Música, Llamadas, Juegos y Oficina y verificar que el volumen se aplique al conectarse.
+8. Confirmar que los avisos activados por cada perfil se reflejen en las preferencias efectivas.
 
 ## Segundo plano
 
@@ -74,6 +83,8 @@ Confirmar qué componentes publica Android y si el valor se repite después de d
 
 Para sensores de oído, ANC, Transparencia, audio adaptativo y audio espacial:
 
+- Ejecutar primero cada escenario desde **Actividad > Laboratorio** en el propio teléfono.
+- Usar [`tools/capture-airpods.ps1`](tools/capture-airpods.ps1) y la [guía de captura](docs/AIRPODS_CAPTURE_GUIDE.md) solo como diagnóstico avanzado opcional del desarrollador.
 - Comenzar por APIs públicas y registrar por separado cualquier resultado del puente nativo experimental.
 - No intentar evadir permisos, autenticación, cifrado, aislamiento del sistema ni restricciones del dispositivo.
 - Repetir cada transición al menos tres veces.

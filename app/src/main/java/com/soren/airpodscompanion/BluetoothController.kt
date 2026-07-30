@@ -92,6 +92,15 @@ class BluetoothController(private val context: Context) {
     private val handler = Handler(Looper.getMainLooper())
     private var registered = false
     private var bleCapturing = false
+    private var pendingReconnectAddress: String? = null
+    private var reconnectGeneration = 0
+    private val batteryPoll = object : Runnable {
+        override fun run() {
+            if (!registered) return
+            pollConnectedBattery()
+            handler.postDelayed(this, BATTERY_POLL_INTERVAL_MS)
+        }
+    }
 
     private val protocolScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -119,12 +128,14 @@ class BluetoothController(private val context: Context) {
                 BluetoothAdapter.ACTION_DISCOVERY_STARTED,
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED,
                 BluetoothDevice.ACTION_UUID,
+                BluetoothDevice.ACTION_NAME_CHANGED,
                 BluetoothDevice.ACTION_ACL_CONNECTED,
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> refresh()
                 BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED,
                 BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> handleProfileConnection(intent)
                 BluetoothA2dp.ACTION_PLAYING_STATE_CHANGED,
                 BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED -> handleAudioState(intent)
+                ACTION_BATTERY_LEVEL_CHANGED -> readAndroidBatteryEvent(intent)
                 BluetoothDevice.ACTION_BOND_STATE_CHANGED -> handleBondState(intent)
                 BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT -> readBatteryEvent(intent)
                 BluetoothDevice.ACTION_FOUND -> {
@@ -146,6 +157,7 @@ class BluetoothController(private val context: Context) {
     private val profileListener = object : BluetoothProfile.ServiceListener {
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
             proxies[profile] = proxy
+            attemptPendingReconnect()
             refresh()
         }
 
@@ -173,6 +185,7 @@ class BluetoothController(private val context: Context) {
                 addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
                 addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
                 addAction(BluetoothDevice.ACTION_FOUND)
+                addAction(BluetoothDevice.ACTION_NAME_CHANGED)
                 addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
                 addAction(BluetoothDevice.ACTION_UUID)
                 addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
@@ -181,6 +194,7 @@ class BluetoothController(private val context: Context) {
                 addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
                 addAction(BluetoothA2dp.ACTION_PLAYING_STATE_CHANGED)
                 addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED)
+                addAction(ACTION_BATTERY_LEVEL_CHANGED)
                 addAction(BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT)
                 addCategory(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY + ".76")
             }
@@ -192,6 +206,8 @@ class BluetoothController(private val context: Context) {
             registered = true
         }
         refresh()
+        handler.removeCallbacks(batteryPoll)
+        handler.post(batteryPoll)
     }
 
     fun stop() {
@@ -234,6 +250,7 @@ class BluetoothController(private val context: Context) {
                     if (devices.any { it.connected } && bluetooth.isDiscovering) bluetooth.cancelDiscovery()
                     val status = when {
                         devices.any { it.connected } -> BluetoothStatus.CONNECTED
+                        pendingReconnectAddress != null -> BluetoothStatus.RECONNECTING
                         bluetooth.isDiscovering -> BluetoothStatus.SEARCHING
                         else -> BluetoothStatus.READY
                     }
@@ -243,6 +260,11 @@ class BluetoothController(private val context: Context) {
                         history = history,
                         protocolCapture = captureStore.state()
                     )
+                    if (devices.any { it.connected }) {
+                        pendingReconnectAddress = null
+                        reconnectGeneration += 1
+                        snapshotStore.clearReconnecting()
+                    }
                     snapshotStore.save(devices.firstOrNull { it.connected })
                 }.onFailure {
                     val message = it.localizedMessage ?: "Error Bluetooth desconocido"
@@ -300,22 +322,33 @@ class BluetoothController(private val context: Context) {
             val device = bluetooth.getRemoteDevice(address)
             if (device.bondState != BluetoothDevice.BOND_BONDED) return pair(address)
             if (proxies.values.any { device in it.connectedDevices }) return refresh()
+            bluetooth.cancelDiscoverySafely()
             snapshotStore.markReconnecting()
             _state.value = _state.value.copy(status = BluetoothStatus.RECONNECTING, error = null)
-            val started = device.fetchUuidsWithSdp()
-            if (!started) {
-                reportError(
-                    "Android no permitió iniciar la reconexión. Puedes conectarlos desde Bluetooth del sistema.",
-                    runCatching { device.name }.getOrNull() ?: "AirPods"
-                )
-            }
+            pendingReconnectAddress = address
+            reconnectGeneration += 1
+            val generation = reconnectGeneration
+            ensureProfile(BluetoothProfile.A2DP)
+            ensureProfile(BluetoothProfile.HEADSET)
+            attemptProfileConnection(device)
+            device.fetchUuidsWithSdp()
             handler.postDelayed({
+                if (pendingReconnectAddress == address && reconnectGeneration == generation) {
+                    attemptProfileConnection(device)
+                }
+            }, PROFILE_RETRY_DELAY_MS)
+            handler.postDelayed({
+                if (pendingReconnectAddress != address || reconnectGeneration != generation) return@postDelayed
                 refresh()
                 if (_state.value.connectedDevice == null) {
+                    pendingReconnectAddress = null
                     snapshotStore.clearReconnecting()
-                    reportError("Android no restableció los perfiles de audio. Conecta los AirPods desde Bluetooth del sistema.")
+                    reportError(
+                        "Android no permitió completar la conexión automática. Pon los AirPods en modo de enlace y usa “Abrir Bluetooth” para terminarla.",
+                        runCatching { device.name }.getOrNull() ?: "AirPods"
+                    )
                 }
-            }, 8_000)
+            }, RECONNECT_TIMEOUT_MS)
         }.onFailure {
             reportError(it.localizedMessage ?: "Error durante la reconexión.")
         }
@@ -356,13 +389,35 @@ class BluetoothController(private val context: Context) {
         if (proxies[profile] == null) adapter?.getProfileProxy(context, profileListener, profile)
     }
 
+    private fun attemptPendingReconnect() {
+        val address = pendingReconnectAddress ?: return
+        val device = runCatching { adapter?.getRemoteDevice(address) }.getOrNull() ?: return
+        attemptProfileConnection(device)
+    }
+
+    private fun attemptProfileConnection(device: BluetoothDevice): Boolean {
+        val deviceConnectionStarted = hiddenCompat.connectDevice(device)
+        val profiles = listOfNotNull(
+            proxies[BluetoothProfile.A2DP],
+            proxies[BluetoothProfile.HEADSET]
+        )
+        return profiles.fold(deviceConnectionStarted) { started, profile ->
+            hiddenCompat.connectProfile(profile, device) || started
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun addDevice(device: BluetoothDevice, connected: Boolean) {
-        val name = runCatching { device.name }.getOrNull() ?: return
-        if (!name.contains("airpods", ignoreCase = true)) return
-        val address = runCatching { device.address }.getOrNull() ?: name
+        val address = runCatching { device.address }.getOrNull() ?: return
+        val snapshot = snapshotStore.load()
+        val publishedName = runCatching { device.name }.getOrNull()
+        val knownAddress = snapshot.address == address
+        val name = publishedName ?: snapshot.name.takeIf { knownAddress } ?: return
+        if (!BluetoothConnectionPolicy.isRecognizedAirPods(name, address, snapshot.address)) return
         val previous = found[address]
-        val identification = AirPodsSignalParser.identify(name)
+        val identification = AirPodsSignalParser.identify(
+            name.takeIf { it.contains("airpods", ignoreCase = true) } ?: snapshot.name ?: name
+        )
         found[address] = AirPodsDevice(
             name = name,
             address = address,
@@ -402,15 +457,59 @@ class BluetoothController(private val context: Context) {
         )
         publishCaptureState()
         val signal = AirPodsSignalParser.parseVendorBattery(command, args) ?: return
+        applyBatterySignal(device, signal)
+    }
+
+    private fun readAndroidBatteryEvent(intent: Intent) {
+        val device = if (Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+        } ?: return
+        val percent = intent.getIntExtra(EXTRA_BATTERY_LEVEL, -1).takeIf { it in 0..100 } ?: return
+        applyAndroidBatteryLevel(device, percent)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun pollConnectedBattery() {
+        if (!hasPermissions() || adapter?.isEnabled != true) return
+        proxies.values
+            .flatMap { it.connectedDevices }
+            .distinctBy { runCatching { it.address }.getOrNull() }
+            .forEach { device ->
+                hiddenCompat.getBatteryLevel(device)?.let { applyAndroidBatteryLevel(device, it) }
+            }
+    }
+
+    private fun applyAndroidBatteryLevel(device: BluetoothDevice, percent: Int) {
+        val signal = ParsedBatterySignal(
+            battery = AirPodsBatteryState(
+                combined = ComponentBattery(
+                    percent = percent,
+                    observedAt = System.currentTimeMillis()
+                )
+            ),
+            source = BatterySignalSource.ANDROID_DEVICE
+        )
+        applyBatterySignal(device, signal)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun applyBatterySignal(device: BluetoothDevice, signal: ParsedBatterySignal) {
         val address = runCatching { device.address }.getOrNull() ?: return
+        val snapshot = snapshotStore.load()
+        val name = runCatching { device.name }.getOrNull() ?: snapshot.name ?: "AirPods"
+        if (!BluetoothConnectionPolicy.isRecognizedAirPods(name, address, snapshot.address)) return
         val previous = batteryByAddress[address] ?: AirPodsBatteryState()
-        val battery = mergeBattery(previous, signal.battery)
-        val name = runCatching { device.name }.getOrNull() ?: "AirPods"
-        val model = AirPodsSignalParser.identify(name).first
+        val battery = BluetoothConnectionPolicy.mergeBatteryReadings(previous, signal.battery)
+        val model = AirPodsSignalParser.identify(
+            name.takeIf { it.contains("airpods", ignoreCase = true) } ?: snapshot.name ?: name
+        ).first
         batteryEvidenceStore.record(model, signal)
         batteryStateStore.save(model, battery)
-        if (previous != battery) {
-            batteryByAddress[address] = battery
+        batteryByAddress[address] = battery
+        if (BluetoothConnectionPolicy.batteryReadingsChanged(previous, battery)) {
             val detail = battery.combined.percent?.let {
                 "Batería general publicada: $it% · ${signal.source.label}"
             } ?: "Batería por componente actualizada · ${signal.source.label}"
@@ -419,16 +518,6 @@ class BluetoothController(private val context: Context) {
         addDevice(device, connected = found[address]?.connected == true)
         snapshotStore.save(_state.value.connectedDevice)
     }
-
-    private fun mergeBattery(
-        previous: AirPodsBatteryState,
-        incoming: AirPodsBatteryState
-    ) = AirPodsBatteryState(
-        left = incoming.left.takeIf { it.percent != null } ?: previous.left,
-        right = incoming.right.takeIf { it.percent != null } ?: previous.right,
-        case = incoming.case.takeIf { it.percent != null } ?: previous.case,
-        combined = incoming.combined.takeIf { it.percent != null } ?: previous.combined
-    )
 
     fun clearHistory() {
         historyStore.clear()
@@ -458,6 +547,10 @@ class BluetoothController(private val context: Context) {
     fun startProtocolCapture(scenario: CaptureScenario) {
         val bluetooth = adapter
         if (bluetooth == null || !hasPermissions() || !bluetooth.isEnabled) return refresh()
+        if (_state.value.connectedDevice == null) {
+            reportError("Conecta los AirPods antes de iniciar una prueba local.")
+            return
+        }
         bluetooth.cancelDiscoverySafely()
         captureStore.start(scenario)
         publishCaptureState()
@@ -524,7 +617,12 @@ class BluetoothController(private val context: Context) {
         val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED)
         val name = device?.let { runCatching { it.name }.getOrNull() } ?: "AirPods"
         when (state) {
-            BluetoothProfile.STATE_CONNECTED -> record(ConnectionEventType.CONNECTED, name, "Perfil de audio conectado")
+            BluetoothProfile.STATE_CONNECTED -> {
+                pendingReconnectAddress = null
+                reconnectGeneration += 1
+                snapshotStore.clearReconnecting()
+                record(ConnectionEventType.CONNECTED, name, "Perfil de audio conectado")
+            }
             BluetoothProfile.STATE_DISCONNECTED -> record(ConnectionEventType.DISCONNECTED, name, "Perfil de audio desconectado")
         }
         refresh()
@@ -612,5 +710,10 @@ class BluetoothController(private val context: Context) {
     private companion object {
         const val APPLE_COMPANY_ID = 0x004C
         const val CAPTURE_DURATION_MS = 15_000L
+        const val PROFILE_RETRY_DELAY_MS = 1_200L
+        const val RECONNECT_TIMEOUT_MS = 12_000L
+        const val BATTERY_POLL_INTERVAL_MS = 15_000L
+        const val ACTION_BATTERY_LEVEL_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED"
+        const val EXTRA_BATTERY_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL"
     }
 }
