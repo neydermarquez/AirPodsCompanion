@@ -22,6 +22,8 @@ AirPods Companion es una aplicación independiente para Android que reconoce Air
 
 La interfaz diferencia los datos actuales, las lecturas antiguas y las funciones que Android no permite controlar. No utiliza valores simulados para aparentar compatibilidad.
 
+La versión actual utiliza una interfaz clara única, con superficies suaves, navegación inferior persistente y estados específicos para permisos, Bluetooth apagado, búsqueda, conexión, reconexión, pérdida de conexión y compatibilidad limitada.
+
 ## Capturas
 
 <p align="center">
@@ -45,7 +47,38 @@ La interfaz diferencia los datos actuales, las lecturas antiguas y las funciones
 - Notificaciones configurables y supervisión opcional en segundo plano.
 - Widget de conexión y batería.
 - Información de compatibilidad por modelo y capacidad.
+- Perfiles para música, llamadas, juegos y oficina.
+- Preferencias independientes de volumen, avisos y diagnósticos por perfil.
 - Exportación y eliminación de los datos locales.
+
+## Más de lo que muestra la pantalla principal
+
+La aplicación incorpora varias funciones de soporte que trabajan detrás de la interfaz:
+
+- Inventario de **41 capacidades** con un estado explícito para cada modelo reconocido.
+- Repositorio Bluetooth único compartido por la actividad y el servicio de supervisión.
+- Servicio en primer plano con estado visible, registro de recuperaciones y reinicio opcional después de encender el teléfono.
+- Asociación opcional mediante Companion Device Manager en versiones compatibles de Android.
+- Recomendaciones de segundo plano específicas para Samsung, Xiaomi, Motorola, OnePlus, Oppo, Realme, Huawei y Honor.
+- Notificaciones separadas para conexión, desconexión y batería baja, con acción de reconexión.
+- Widget automático, compacto o detallado, con estados de permisos, Bluetooth, reconexión y batería por componente.
+- Retención configurable para el historial y las muestras técnicas.
+- Migración automática de preferencias antiguas a DataStore.
+- Historial y evidencia técnica almacenados localmente con Room.
+
+## Laboratorio de compatibilidad
+
+AirPods Companion incluye un laboratorio local para registrar y comparar señales de:
+
+- Cancelación de ruido.
+- Transparencia.
+- Audio adaptativo.
+- Auricular izquierdo y derecho.
+- Estuche abierto.
+- Carga.
+- Gestos o controles físicos.
+
+Una capacidad pendiente solo puede pasar a **Detectable** cuando existen diferencias estables y reproducibles en tres o más muestras. Las sesiones pueden compararse, eliminarse o exportarse de forma anónima con autorización del usuario.
 
 ## Estados transparentes
 
@@ -59,6 +92,8 @@ Cada capacidad se presenta con un estado explícito:
 - **Pendiente de evidencia:** requiere validación reproducible con hardware real.
 
 Funciones propietarias como Buscar, iCloud, Siri, actualización de firmware y personalizaciones exclusivas del ecosistema Apple no se presentan como disponibles en Android.
+
+La compilación pública utiliza APIs de Android como base. El proyecto contiene un puente nativo experimental para investigación controlada, pero permanece desactivado por defecto y no forma parte del comportamiento normal de la versión publicada.
 
 ## Descargar e instalar
 
@@ -82,9 +117,11 @@ Get-FileHash .\AirPods-Companion-v1.0.0.apk -Algorithm SHA256
 - Procesamiento local.
 - Sin publicidad.
 - Sin cuenta de Apple.
-- Sin recopilación de ubicación.
+- Sin recopilación ni almacenamiento de ubicación.
 - Sin transmisión automática de diagnósticos.
 - Historial y evidencia técnica eliminables desde la aplicación.
+
+En Android 11 o versiones anteriores, el sistema puede asociar el escaneo Bluetooth con el permiso de ubicación debido a su modelo histórico de permisos. AirPods Companion no utiliza ese permiso para obtener ni guardar la ubicación del usuario. En Android 12 o posterior se emplean los permisos de dispositivos cercanos.
 
 Consulta la [política de privacidad](docs/legal/PRIVACY_POLICY.md) y la [declaración de independencia](docs/legal/APPLE_INDEPENDENCE_NOTICE.md).
 
@@ -117,12 +154,15 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 - Bluetooth Classic, A2DP y HFP
 - DataStore
 - Room
+- ViewModel y restauración de estado
+- Companion Device Manager
 - Servicios y notificaciones de Android
 - Widgets de aplicación
+- R8 y reducción de recursos en release
 
 ## Estado del proyecto
 
-La versión pública actual es `v1.0.0`. La aplicación está compilada, firmada y disponible para instalación. La validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
+La versión pública actual es `v1.0.0`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
 
 Consulta la [trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md) y la [matriz de pruebas de hardware](HARDWARE_TEST_MATRIX.md) para conocer el estado exacto de cada área.
 
