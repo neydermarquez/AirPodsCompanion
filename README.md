@@ -26,9 +26,9 @@ La interfaz diferencia los datos actuales, las lecturas antiguas y las funciones
 
 <p align="center">
   <img src="docs/screenshots/permissions.png" width="23%" alt="Solicitud de permiso para dispositivos cercanos">
-  <img src="docs/screenshots/home.png" width="23%" alt="Inicio y detección automática">
   <img src="docs/screenshots/devices.png" width="23%" alt="Búsqueda y conexión de dispositivos">
   <img src="docs/screenshots/activity.png" width="23%" alt="Historial local de actividad">
+  <img src="docs/screenshots/settings.png" width="23%" alt="Preferencias, notificaciones y supervisión">
 </p>
 
 ## Funciones principales
