@@ -16,6 +16,10 @@ Instala `AirPods-Companion-v1.0.1.apk`.
 
 Comprueba los archivos con las sumas SHA-256 incluidas en `SHA256SUMS.txt`.
 
+## Puente nativo
+
+La versión 1.0.1 incluye el puente JNI habilitado por defecto y bibliotecas para `arm64-v8a`, `armeabi-v7a`, `x86` y `x86_64`. Es una ruta experimental con respaldo por reflexión: su disponibilidad depende del fabricante y de Android, y no convierte una función bloqueada en compatible.
+
 ## Firma
 
 Certificado SHA-256:

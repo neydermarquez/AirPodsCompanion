@@ -1,5 +1,7 @@
 # Guía de release
 
+La versión de referencia actual es `v1.0.1`. Desde esta versión, el puente nativo se compila por defecto.
+
 ## Firma
 
 1. Crear un keystore de carga en un equipo seguro.
@@ -12,11 +14,23 @@ El proyecto nunca usa la clave debug como sustituto de una firma release.
 
 ## Compilación
 
+Requisitos adicionales:
+
+- Android NDK `28.2.13676358`.
+- CMake `3.22.1`.
+
 ```powershell
-.\gradlew.bat clean test lintRelease bundleRelease
+.\gradlew.bat clean :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:bundleRelease --no-configuration-cache --no-daemon
 ```
 
-El AAB resultante se genera en `app/build/outputs/bundle/release/`.
+- APK: `app/build/outputs/apk/release/app-release.apk`.
+- AAB: `app/build/outputs/bundle/release/app-release.aab`.
+
+Para una compilación puntual sin puente nativo:
+
+```powershell
+.\gradlew.bat -PenableHiddenApiNativeBridge=false assembleRelease
+```
 
 ## Versionado
 
@@ -32,5 +46,17 @@ El AAB resultante se genera en `app/build/outputs/bundle/release/`.
 - Confirmar que la ficha no sugiera afiliación con Apple.
 - Verificar permisos y formulario de seguridad de datos.
 - Ejecutar pruebas unitarias, lint y build release.
-- Validar la firma del AAB.
+- Validar la firma del APK y del AAB.
+- Confirmar que el APK contiene `libbluetooth_hidden_bridge.so` para las ABI previstas.
+- Instalar el APK release y comprobar `versionCode`, `versionName`, arranque, excepciones fatales y ANR.
+- Generar `SHA256SUMS.txt` después de producir los binarios definitivos.
+- Crear el tag sobre el mismo commit usado para compilar los binarios.
 - Probar desde el canal interno antes de producción.
+
+## Archivos de GitHub Release
+
+- `AirPods-Companion-v<versión>.apk`: instalación directa.
+- `AirPods-Companion-v<versión>.aab`: Google Play.
+- `SHA256SUMS.txt`: verificación de integridad.
+
+Los archivos “Source code” los genera GitHub automáticamente. La Release debe apuntar al commit exacto de compilación y no marcarse como pre-release cuando sea la versión pública estable.

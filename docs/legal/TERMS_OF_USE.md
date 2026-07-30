@@ -1,10 +1,10 @@
 # Términos de uso de AirPods Companion
 
-**Última actualización:** 29 de julio de 2026
+**Última actualización:** 30 de julio de 2026
 
 ## 1. Alcance
 
-AirPods Companion ofrece funciones complementarias basadas en APIs públicas de Android y en información Bluetooth que el dispositivo conectado publique.
+AirPods Companion ofrece funciones complementarias basadas principalmente en APIs públicas de Android y en información Bluetooth que el dispositivo conectado publique. La versión 1.0.1 también incorpora un puente nativo experimental para diagnósticos permitidos por el sistema, sin garantizar que Android o el fabricante expongan esos datos.
 
 ## 2. Independencia
 
@@ -20,7 +20,7 @@ El usuario debe utilizar la aplicación con dispositivos propios o para los que 
 
 ## 5. Disponibilidad
 
-Las funciones pueden cambiar por actualizaciones de Android, firmware o fabricantes. Los controles sensibles solo se habilitan cuando existe un mecanismo seguro y reproducible.
+Las funciones pueden cambiar por actualizaciones de Android, firmware o fabricantes. Los controles sensibles solo se habilitan cuando existe un mecanismo seguro y reproducible. El puente nativo debe fallar de forma segura y no se utiliza para eludir permisos, autenticación, cifrado ni aislamiento del sistema.
 
 ## 6. Datos
 

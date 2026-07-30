@@ -1,8 +1,8 @@
 # Política de privacidad de AirPods Companion
 
-**Última actualización:** 29 de julio de 2026
+**Última actualización:** 30 de julio de 2026
 
-AirPods Companion es una aplicación complementaria independiente para consultar y gestionar, dentro de las capacidades públicas de Android, dispositivos Bluetooth compatibles.
+AirPods Companion es una aplicación complementaria independiente para consultar y gestionar dispositivos Bluetooth compatibles. Utiliza primero las capacidades públicas de Android y puede realizar diagnósticos locales mediante un puente nativo experimental cuando el sistema lo permita.
 
 ## Responsable
 
@@ -49,6 +49,8 @@ Solo las preferencias de la aplicación pueden participar en la copia de segurid
 - Servicio en primer plano: mantener la supervisión autorizada.
 - Inicio tras reinicio: recuperar la supervisión solo si el usuario la habilita.
 - Ajustes de audio: controles y diagnóstico de rutas de audio compatibles.
+
+El puente nativo no elude permisos ni transmite información. Su disponibilidad depende de Android y del fabricante; los fallos se gestionan localmente y no se convierten en datos simulados.
 
 ## Seguridad
 

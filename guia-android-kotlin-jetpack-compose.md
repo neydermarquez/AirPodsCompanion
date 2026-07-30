@@ -1,5 +1,7 @@
 # Guía inicial para crear aplicaciones Android
 
+> **Estado del documento:** guía histórica de planificación. AirPods Companion ya fue implementada y su versión pública actual es `v1.0.1`. Para conocer el estado real consulta `README.md`, `docs/REQUIREMENTS_TRACEABILITY.md` y `HARDWARE_TEST_MATRIX.md`. Las secciones redactadas en futuro describen el alcance original, no trabajo pendiente confirmado.
+
 ## Tecnología elegida
 
 Para comenzar a desarrollar la aplicación utilizaremos la siguiente combinación:
@@ -151,7 +153,7 @@ Este documento servirá como base técnica para comenzar a desarrollar la aplica
 
 ## Objetivo
 
-Crear una aplicación Android capaz de ofrecer la experiencia más completa posible con los AirPods, sin root, sin modificar el teléfono y utilizando APIs oficiales de Android y Bluetooth.
+Crear una aplicación Android capaz de ofrecer la experiencia más completa posible con los AirPods, sin root y sin modificar el teléfono. La implementación prioriza APIs oficiales de Android y Bluetooth; desde `v1.0.1` incorpora además un puente nativo experimental con degradación segura cuando el sistema bloquea una consulta.
 
 La aplicación no intentará hacer que Android se identifique falsamente como un iPhone. Funcionará como una aplicación complementaria que interpreta las capacidades disponibles de cada modelo.
 

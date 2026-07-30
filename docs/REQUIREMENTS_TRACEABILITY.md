@@ -2,6 +2,10 @@
 
 Este documento cruza el inventario del proyecto con la implementación. Ninguna capacidad propietaria se considera funcional sin evidencia reproducible obtenida con hardware real.
 
+## Base publicada
+
+La referencia documental actual es `v1.0.1` (`versionCode` 2, commit `f33707f`). Esta versión incorpora por defecto un puente JNI experimental, compilado para las cuatro ABI admitidas. El puente amplía intentos de diagnóstico, pero no cambia el criterio de evidencia ni garantiza acceso en todos los fabricantes o versiones de Android.
+
 ## Conexión y estado
 
 | Requisito | Implementación | Estado |
@@ -27,7 +31,7 @@ Este documento cruza el inventario del proyecto con la implementación. Ninguna 
 | Micrófono | Detección de entrada Bluetooth | Implementado |
 | Silenciar/activar | Acción disponible durante llamada y con micrófono Bluetooth | Implementado |
 | Pantalla bloqueada | Gestionada por MediaSession/reproductor de Android | Gestionado por Android |
-| Códec | La API pública no entrega el códec activo a esta app | No publicado |
+| Códec | API pública primero; consulta JNI/reflexión como alternativa experimental y degradación segura | Dependiente del sistema |
 | Latencia | Requiere medición física de reproducción/captura | Pendiente de hardware |
 
 ## Sensores, gestos y modos
@@ -88,6 +92,7 @@ Se muestran explícitamente como no disponibles:
 
 ## Validación pendiente de hardware
 
+- Confirmar en teléfono físico qué llamadas del puente nativo siguen permitidas por fabricante y versión de Android.
 - Confirmar batería por generación y teléfono.
 - Confirmar señales de carga.
 - Medir latencia física.
