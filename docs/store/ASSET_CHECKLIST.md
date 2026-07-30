@@ -1,10 +1,14 @@
 # Recursos de publicación
 
+Referencia revisada: `v1.0.1`.
+
 ## Disponibles en el proyecto
 
 - Icono adaptativo y redondo.
 - Nombre y descripciones de tienda.
 - Fondo e identidad visual.
+- Capturas de permisos, dispositivos, actividad y ajustes utilizadas por el README.
+- APK, AAB y sumas SHA-256 de la publicación actual.
 
 ## Capturas requeridas
 
@@ -25,3 +29,11 @@ No crear capturas de ANC, batería individual o sensores si el hardware no los h
 - Correo de soporte.
 - Gráfico promocional definitivo si Google Play lo exige.
 - Capturas en los tamaños solicitados por la consola.
+
+## Verificación para GitHub
+
+- El README enlaza a `/releases/latest`.
+- La Release estable está marcada como **Latest**, no como **Pre-release**.
+- El tag apunta al commit utilizado para compilar.
+- Los archivos adjuntos usan la misma versión en sus nombres.
+- El APK descargable y `SHA256SUMS.txt` coinciden.

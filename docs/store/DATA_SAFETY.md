@@ -1,6 +1,6 @@
 # Declaración de seguridad de datos
 
-Esta guía refleja el código actual. Debe volver a comprobarse en cada release.
+Esta guía refleja `v1.0.1`. Debe volver a comprobarse en cada release.
 
 ## Recopilación y compartición
 
@@ -10,6 +10,8 @@ Esta guía refleja el código actual. Debe volver a comprobarse en cada release.
 - SDK de analítica o fallos remoto: **No**.
 
 Los datos Bluetooth, preferencias, historial, métricas e informes se procesan localmente. Una exportación iniciada por el usuario no constituye transmisión automática por el desarrollador.
+
+El puente nativo incluido desde `v1.0.1` realiza intentos locales de diagnóstico y no añade permiso `INTERNET`, telemetría ni transmisión automática.
 
 ## Seguridad
 

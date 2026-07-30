@@ -182,6 +182,19 @@ La versión pública actual es `v1.0.1`. La aplicación está compilada, firmada
 
 Consulta la [trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md) y la [matriz de pruebas de hardware](HARDWARE_TEST_MATRIX.md) para conocer el estado exacto de cada área.
 
+## Documentación
+
+- [Matriz de validación física](HARDWARE_TEST_MATRIX.md)
+- [Trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md)
+- [Guía de compilación y publicación](docs/release/RELEASE_GUIDE.md)
+- [Migración e identidad del paquete](docs/release/MIGRATION.md)
+- [Recursos para publicación](docs/store/ASSET_CHECKLIST.md)
+- [Seguridad de datos](docs/store/DATA_SAFETY.md)
+- [Ficha de Google Play](docs/store/GOOGLE_PLAY_LISTING_ES.md)
+- [Política de privacidad](docs/legal/PRIVACY_POLICY.md)
+- [Términos de uso](docs/legal/TERMS_OF_USE.md)
+- [Declaración de independencia](docs/legal/APPLE_INDEPENDENCE_NOTICE.md)
+
 ## Independencia
 
 AirPods Companion es una aplicación independiente y no está afiliada, patrocinada ni aprobada por Apple Inc. AirPods y Apple son marcas de Apple Inc. La disponibilidad de funciones depende de las capacidades que Android y el dispositivo conectado publiquen.

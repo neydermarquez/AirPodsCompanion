@@ -1,5 +1,7 @@
 # Clasificación de contenido
 
+Referencia revisada: `v1.0.1`.
+
 Respuestas previstas para el cuestionario, sujetas al formulario vigente de Google Play:
 
 - Violencia: no.

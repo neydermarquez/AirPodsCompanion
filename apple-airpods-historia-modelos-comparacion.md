@@ -1,5 +1,7 @@
 # Apple AirPods — Historia, modelos y comparación completa
 
+> **Uso interno:** documento de investigación de modelos, no matriz de compatibilidad ni fuente de promesas comerciales. Los modelos futuros o no validados y sus características deben confirmarse con fuentes oficiales antes de incorporarlos a la aplicación o a una ficha de publicación. El estado real de AirPods Companion se mantiene en `docs/REQUIREMENTS_TRACEABILITY.md` y `HARDWARE_TEST_MATRIX.md`.
+
 ## Introducción
 
 Apple ha desarrollado una familia completa de audífonos inalámbricos bajo la marca **AirPods**, dividida en tres líneas principales:

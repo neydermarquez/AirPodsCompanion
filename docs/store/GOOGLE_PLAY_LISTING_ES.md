@@ -1,5 +1,7 @@
 # Ficha de Google Play — Español
 
+Referencia revisada: `v1.0.1`.
+
 ## Nombre
 
 AirPods Companion
