@@ -12,7 +12,9 @@ if (signingPropertiesFile.isFile) {
 }
 val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
     .all { !signingProperties.getProperty(it).isNullOrBlank() }
-val useHiddenApiNativeBridge = providers.gradleProperty("enableHiddenApiNativeBridge").orElse("false").get().toBoolean()
+// Toggle del puente nativo para APIs ocultas. Para desactivarlo en builds puntuales:
+// ./gradlew -PenableHiddenApiNativeBridge=false
+val useHiddenApiNativeBridge = providers.gradleProperty("enableHiddenApiNativeBridge").orElse("true").get().toBoolean()
 
 android {
     namespace = "com.soren.airpodscompanion"
