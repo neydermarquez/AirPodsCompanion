@@ -1,5 +1,6 @@
 package com.soren.airpodscompanion.data.preferences
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -87,6 +88,8 @@ class AppPreferencesRepository private constructor(private val context: Context)
             "widget_preferences",
             "protocol_capture"
         )
+        // The repository always receives applicationContext in get(); no Activity is retained.
+        @SuppressLint("StaticFieldLeak")
         @Volatile private var instance: AppPreferencesRepository? = null
 
         fun get(context: Context): AppPreferencesRepository =

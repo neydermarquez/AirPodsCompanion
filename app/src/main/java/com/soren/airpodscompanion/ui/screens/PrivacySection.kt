@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,9 +36,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import com.soren.airpodscompanion.DiagnosticConsent
+import com.soren.airpodscompanion.DiagnosticConsentStore
 
 @Composable
 fun PrivacySection(onExportAll: () -> Unit, onDeleteAll: () -> Unit) {
+    val context = LocalContext.current
+    val consentStore = remember { DiagnosticConsentStore(context.applicationContext) }
+    var diagnosticConsent by remember { mutableStateOf(consentStore.load()) }
     var confirmExport by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     Surface(
@@ -50,9 +56,27 @@ fun PrivacySection(onExportAll: () -> Unit, onDeleteAll: () -> Unit) {
             PrivacyRow(
                 Icons.Outlined.Shield,
                 "Procesamiento local",
-                "Sin cuenta de Apple. El historial y la evidencia no se incluyen en copias de seguridad.",
+                "Sin cuenta de Apple. Los diagnósticos no se transmiten automáticamente.",
                 "Privado"
             )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            ConsentRow(
+                title = "Informes de fallos",
+                detail = "Guarda hasta 5 informes locales para que puedas exportarlos",
+                checked = diagnosticConsent.crashReports
+            ) {
+                diagnosticConsent = diagnosticConsent.copy(crashReports = it)
+                consentStore.save(diagnosticConsent)
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            ConsentRow(
+                title = "Métricas de uso",
+                detail = "Cuenta aperturas y pantallas localmente, sin identificadores",
+                checked = diagnosticConsent.usageMetrics
+            ) {
+                diagnosticConsent = diagnosticConsent.copy(usageMetrics = it)
+                consentStore.save(diagnosticConsent)
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             PrivacyRow(
                 Icons.Outlined.Timeline,
@@ -106,6 +130,29 @@ fun PrivacySection(onExportAll: () -> Unit, onDeleteAll: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
         )
+    }
+}
+
+@Composable
+private fun ConsentRow(
+    title: String,
+    detail: String,
+    checked: Boolean,
+    onChecked: (Boolean) -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth()
+            .sizeIn(minHeight = 48.dp)
+            .clickable { onChecked(!checked) }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
+        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChecked)
     }
 }
 

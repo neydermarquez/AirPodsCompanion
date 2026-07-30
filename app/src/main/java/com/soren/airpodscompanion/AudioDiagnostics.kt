@@ -1,5 +1,6 @@
 package com.soren.airpodscompanion
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -58,6 +59,7 @@ class AudioDiagnostics(context: Context) {
         return true
     }
 
+    @SuppressLint("InlinedApi")
     private fun AudioDeviceInfo.isBluetooth() = type in setOf(
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
         AudioDeviceInfo.TYPE_BLUETOOTH_SCO,

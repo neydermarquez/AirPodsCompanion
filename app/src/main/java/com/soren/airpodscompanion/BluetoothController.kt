@@ -380,6 +380,7 @@ class BluetoothController(private val context: Context) {
         )
     }
 
+
     @SuppressLint("MissingPermission")
     private fun readBatteryEvent(intent: Intent) {
         val device = if (Build.VERSION.SDK_INT >= 33) {

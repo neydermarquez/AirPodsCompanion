@@ -12,6 +12,8 @@ class PrivacyRepository(private val context: Context) {
             .filterKeys { !it.startsWith("_meta.") }
         val activity = ConnectionHistoryStore(context).load()
         val protocol = ProtocolCaptureStore(context).load()
+        val crashes = CrashReportStore(context).reports()
+        val metrics = LocalMetricStore(context).snapshot()
         return buildString {
             append("{\n  \"format\":\"airpods-companion-user-data-v1\",\n")
             append("  \"exportedAt\":${System.currentTimeMillis()},\n")
@@ -36,6 +38,17 @@ class PrivacyRepository(private val context: Context) {
                 if (index < protocol.lastIndex) append(",")
                 append("\n")
             }
+            append("  ],\n  \"localMetrics\":{")
+            metrics.entries.forEachIndexed { index, entry ->
+                append("\"${json(entry.key)}\":${entry.value}")
+                if (index < metrics.size - 1) append(",")
+            }
+            append("},\n  \"localCrashReports\":[\n")
+            crashes.forEachIndexed { index, report ->
+                append(report.prependIndent("    "))
+                if (index < crashes.lastIndex) append(",")
+                append("\n")
+            }
             append("  ]\n}")
         }
     }
@@ -48,6 +61,8 @@ class PrivacyRepository(private val context: Context) {
             }
         }
         AppPreferencesRepository.get(context).clearAll()
+        CrashReportStore(context).clear()
+        LocalMetricStore(context).clear()
         LEGACY_STORES.forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
         }

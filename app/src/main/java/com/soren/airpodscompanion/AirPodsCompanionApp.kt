@@ -437,6 +437,11 @@ private fun AppShell(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val selectedTab = AppDestination.indexOf(backStackEntry?.destination?.route)
+    LaunchedEffect(backStackEntry?.destination?.route) {
+        backStackEntry?.destination?.route?.let {
+            DiagnosticConsentStore(context).recordMetric("screen_$it")
+        }
+    }
     var connectionPopup by remember { mutableStateOf<ConnectionPopupModel?>(null) }
     var previousAddress by remember { mutableStateOf<String?>(null) }
     var connectionStateInitialized by remember { mutableStateOf(false) }
@@ -488,7 +493,16 @@ private fun AppShell(
                         HomeScreen(bluetoothState, onPermission, onEnableBluetooth, onScan)
                     }
                     composable(AppDestination.DEVICES.route) {
-                        DevicesScreen(bluetoothState, onPermission, onEnableBluetooth, onScan, onPair, onReconnect, mediaControls)
+                        DevicesScreen(
+                            bluetoothState,
+                            onPermission,
+                            onEnableBluetooth,
+                            onScan,
+                            onPair,
+                            onReconnect,
+                            mediaControls,
+                            diagnostics
+                        )
                     }
                     composable(AppDestination.ACTIVITY.route) {
                         ActivityScreen(
@@ -940,8 +954,10 @@ private fun DevicesScreen(
     onScan: () -> Unit,
     onPair: (String) -> Unit,
     onReconnect: (String) -> Unit,
-    mediaControls: MediaControls
+    mediaControls: MediaControls,
+    diagnostics: AudioDiagnostics
 ) {
+    val connectedDevice = state.connectedDevice
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         SectionHeader("Dispositivos", "Detección automática")
         DeviceDiscoveryPanel(state, onPermission, onEnableBluetooth, onScan)
@@ -950,15 +966,19 @@ private fun DevicesScreen(
             SectionHeader("Disponibles", if (state.status == BluetoothStatus.PAIRING) "Emparejando" else "${available.size} encontrados")
             AvailableDevices(available, state.status, onPair, onReconnect)
         }
-        if (state.connectedDevice != null) {
+        if (connectedDevice != null) {
             SectionHeader("Multimedia", "Control del sistema")
             MediaControlPanel(mediaControls)
+            SectionHeader("Estado de audio", "Lecturas actuales de Android")
+            ConnectedAudioStatusPanel(diagnostics.inspect())
+            SectionHeader("Funciones del modelo", "Compatibilidad completa")
+            ConnectedFeatureInventory(connectedDevice)
         }
-        if (state.connectedDevice == null) {
+        if (connectedDevice == null) {
             SectionHeader("Conexión sencilla", "Sin pasos innecesarios")
             ConnectionGuide()
         }
-        AcrylicCard {
+        if (connectedDevice == null) AcrylicCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 androidx.compose.material3.Icon(
                     Icons.Outlined.Shield,
@@ -979,6 +999,168 @@ private fun DevicesScreen(
             }
         }
         Spacer(Modifier.height(96.dp))
+    }
+}
+
+@Composable
+private fun ConnectedAudioStatusPanel(state: AudioDiagnosticState) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            CompatibilityLine(
+                "Salida multimedia",
+                if (state.bluetoothOutput) "Activa por Bluetooth" else "Conectada, sin audio activo"
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            CompatibilityLine("Códec A2DP", "No publicado por la API pública")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            CompatibilityLine(
+                "Micrófono Bluetooth",
+                if (state.bluetoothMicrophone) "Disponible" else "No activo en esta ruta"
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            CompatibilityLine(
+                "Llamada",
+                when {
+                    !state.callActive -> "Sin llamada activa"
+                    state.microphoneMuted -> "Activa · micrófono silenciado"
+                    else -> "Activa · micrófono disponible"
+                }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            CompatibilityLine(
+                "Audio espacial de Android",
+                when {
+                    !state.spatialAudioSupported -> "No compatible en este teléfono"
+                    state.spatialAudioEnabled && state.spatialAudioAvailable -> "Activo"
+                    state.spatialAudioAvailable -> "Disponible"
+                    else -> "No disponible en esta ruta"
+                }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            CompatibilityLine(
+                "Seguimiento de cabeza",
+                if (state.headTrackerAvailable) "Detectado por Android" else "No publicado"
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            CompatibilityLine("Firmware", "No publicado por Android")
+        }
+    }
+}
+
+@Composable
+private fun ConnectedFeatureInventory(device: AirPodsDevice) {
+    val capabilities = device.capabilities ?: AirPodsCapabilityRegistry.forModel(device.identifiedModel)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            "Los estados describen lo que esta app puede hacer o comprobar. “Control físico” significa que la función pertenece a los AirPods, pero Android no ofrece un control público equivalente.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        FeatureCapabilityGroup(
+            "Audio y llamadas",
+            listOf(
+                AirPodsFeature.MEDIA_CONTROLS,
+                AirPodsFeature.CALL_AUDIO,
+                AirPodsFeature.MICROPHONE,
+                AirPodsFeature.MICROPHONE_MUTE,
+                AirPodsFeature.AUDIO_CODEC,
+                AirPodsFeature.LOCK_SCREEN_CONTROLS,
+                AirPodsFeature.LATENCY_DIAGNOSTIC,
+                AirPodsFeature.LOW_POWER_MODE,
+                AirPodsFeature.DEVICE_NAME
+            ),
+            capabilities
+        )
+        FeatureCapabilityGroup(
+            "Modos de escucha",
+            listOf(
+                AirPodsFeature.ANC,
+                AirPodsFeature.TRANSPARENCY,
+                AirPodsFeature.ADAPTIVE_AUDIO,
+                AirPodsFeature.CONVERSATION_AWARENESS,
+                AirPodsFeature.PERSONALIZED_VOLUME,
+                AirPodsFeature.ADAPTIVE_EQ,
+                AirPodsFeature.LOUD_SOUND_REDUCTION
+            ),
+            capabilities
+        )
+        FeatureCapabilityGroup(
+            "Sensores y controles",
+            listOf(
+                AirPodsFeature.EAR_DETECTION,
+                AirPodsFeature.AUTO_PAUSE,
+                AirPodsFeature.DOUBLE_TAP,
+                AirPodsFeature.PRESS_CONTROLS,
+                AirPodsFeature.DIGITAL_CROWN,
+                AirPodsFeature.LISTENING_MODE_BUTTON,
+                AirPodsFeature.CUSTOM_ACTIONS,
+                AirPodsFeature.HEAD_GESTURES,
+                AirPodsFeature.CALL_HEAD_GESTURES,
+                AirPodsFeature.NOTIFICATION_GESTURES
+            ),
+            capabilities
+        )
+        FeatureCapabilityGroup(
+            "Audio espacial",
+            listOf(
+                AirPodsFeature.SPATIAL_AUDIO,
+                AirPodsFeature.HEAD_TRACKING,
+                AirPodsFeature.PERSONALIZED_SPATIAL
+            ),
+            capabilities
+        )
+        FeatureCapabilityGroup(
+            "Servicios de ecosistema",
+            listOf(
+                AirPodsFeature.ANNOUNCEMENTS,
+                AirPodsFeature.SIRI,
+                AirPodsFeature.ICLOUD,
+                AirPodsFeature.APPLE_AUTO_SWITCH,
+                AirPodsFeature.FIND_MY,
+                AirPodsFeature.FIRMWARE_UPDATE,
+                AirPodsFeature.HEARING_HEALTH,
+                AirPodsFeature.HEARING_TEST,
+                AirPodsFeature.HEARING_AID,
+                AirPodsFeature.HEARING_PROTECTION,
+                AirPodsFeature.APPLE_INTELLIGENCE,
+                AirPodsFeature.LIVE_TRANSLATION
+            ),
+            capabilities
+        )
+    }
+}
+
+@Composable
+private fun FeatureCapabilityGroup(
+    title: String,
+    features: List<AirPodsFeature>,
+    capabilities: ModelCapabilities
+) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                title,
+                modifier = Modifier.padding(top = 15.dp, bottom = 6.dp),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            features.forEachIndexed { index, feature ->
+                CompatibilityLine(feature.title, capabilities.access(feature).label)
+                if (index < features.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+                }
+            }
+        }
     }
 }
 
@@ -1173,6 +1355,12 @@ private fun DeviceDiscoveryPanel(state: BluetoothUiState, onPermission: () -> Un
                 }
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            DeviceFact(
+                "Estado",
+                "Conectado",
+                if (connected.bonded) "Vinculado en Bluetooth de Android" else "Conexión activa sin vínculo guardado"
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             Spacer(Modifier.height(13.dp))
             Text("Batería por componente", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(10.dp))
@@ -1207,27 +1395,16 @@ private fun DeviceDiscoveryPanel(state: BluetoothUiState, onPermission: () -> Un
                     BatteryComponent("Estuche", connected.battery.case, Modifier.weight(1f))
                 }
             }
+            if (connected.battery.combined.percent != null) {
+                Spacer(Modifier.height(10.dp))
+                BatteryComponent("Batería general", connected.battery.combined, Modifier.fillMaxWidth())
+            }
             Spacer(Modifier.height(10.dp))
             Text(
                 batteryEvidenceDescription(connected),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(18.dp))
-            Text("Compatibilidad del modelo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(5.dp))
-            val capabilities = connected.capabilities ?: AirPodsCapabilityRegistry.forModel(connected.identifiedModel)
-            listOf(
-                AirPodsFeature.ANC,
-                AirPodsFeature.TRANSPARENCY,
-                AirPodsFeature.ADAPTIVE_AUDIO,
-                AirPodsFeature.EAR_DETECTION,
-                AirPodsFeature.AUTO_PAUSE,
-                AirPodsFeature.PRESS_CONTROLS,
-                AirPodsFeature.SPATIAL_AUDIO
-            ).forEach { feature ->
-                CompatibilityLine(feature.title, capabilities.access(feature).label)
-            }
         } else {
             Text("Conecta sin pasos extra", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
