@@ -26,12 +26,28 @@ La versión actual utiliza una interfaz clara única, con superficies suaves, na
 
 ## Capturas
 
+### v1.0.2 — Actual
+
 <p align="center">
-  <img src="docs/screenshots/permissions.png" width="23%" alt="Solicitud de permiso para dispositivos cercanos">
-  <img src="docs/screenshots/devices.png" width="23%" alt="Búsqueda y conexión de dispositivos">
-  <img src="docs/screenshots/activity.png" width="23%" alt="Historial local de actividad">
-  <img src="docs/screenshots/settings.png" width="23%" alt="Preferencias, notificaciones y supervisión">
+  <img src="docs/screenshots/v1.0.2/inicio.png" width="23%" alt="Inicio de AirPods Companion v1.0.2">
+  <img src="docs/screenshots/v1.0.2/dispositivos.png" width="23%" alt="Detección de dispositivos en AirPods Companion v1.0.2">
+  <img src="docs/screenshots/v1.0.2/actividad.png" width="23%" alt="Actividad y laboratorio en AirPods Companion v1.0.2">
+  <img src="docs/screenshots/v1.0.2/ajustes.png" width="23%" alt="Ajustes de AirPods Companion v1.0.2">
 </p>
+
+<details>
+<summary><strong>v1.0.1</strong></summary>
+
+<br>
+
+<p align="center">
+  <img src="docs/screenshots/v1.0.1/inicio.png" width="23%" alt="Inicio de AirPods Companion v1.0.1">
+  <img src="docs/screenshots/v1.0.1/dispositivos.png" width="23%" alt="Dispositivos en AirPods Companion v1.0.1">
+  <img src="docs/screenshots/v1.0.1/actividad.png" width="23%" alt="Actividad en AirPods Companion v1.0.1">
+  <img src="docs/screenshots/v1.0.1/ajustes.png" width="23%" alt="Ajustes de AirPods Companion v1.0.1">
+</p>
+
+</details>
 
 ## Funciones principales
 
@@ -113,7 +129,7 @@ Desde `v1.0.1`, los binarios publicados incluyen el puente nativo activado por d
 ## Descargar e instalar
 
 1. Abre la [última versión publicada](https://github.com/neydermarquez/AirPodsCompanion/releases/latest).
-2. Descarga `AirPods-Companion-v1.0.1.apk`.
+2. Descarga `AirPods-Companion-v1.0.2.apk`.
 3. Abre el archivo en tu dispositivo Android.
 4. Si Android lo solicita, autoriza temporalmente la instalación desde el navegador o gestor de archivos.
 
@@ -124,7 +140,7 @@ Requiere Android 7.0 (API 24) o posterior. El archivo `.aab` de la publicación 
 La publicación incluye `SHA256SUMS.txt`. En Windows puedes comprobar el APK con:
 
 ```powershell
-Get-FileHash .\AirPods-Companion-v1.0.1.apk -Algorithm SHA256
+Get-FileHash .\AirPods-Companion-v1.0.2.apk -Algorithm SHA256
 ```
 
 ## Privacidad
@@ -145,7 +161,7 @@ Consulta la [política de privacidad](docs/legal/PRIVACY_POLICY.md) y la [declar
 
 Requisitos:
 
-- Android Studio con JDK 11 o posterior.
+- Android Studio con JDK 17 o posterior.
 - Android SDK 36.
 - Android NDK y CMake 3.22.1 para la configuración predeterminada con puente nativo.
 
@@ -187,7 +203,7 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 
 ## Estado del proyecto
 
-La versión pública actual es `v1.0.1`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
+La versión pública actual es `v1.0.2`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
 
 Consulta la [trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md) y la [matriz de pruebas de hardware](HARDWARE_TEST_MATRIX.md) para conocer el estado exacto de cada área.
 
