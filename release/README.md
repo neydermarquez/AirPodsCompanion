@@ -1,8 +1,8 @@
-# AirPods Companion 1.0.0
+# AirPods Companion 1.0.1
 
 ## Descarga para Android
 
-Instala `AirPods-Companion-v1.0.0.apk`.
+Instala `AirPods-Companion-v1.0.1.apk`.
 
 - Requiere Android 7.0 (API 24) o una versión posterior.
 - Android puede solicitar autorización para instalar aplicaciones desde el navegador o gestor de archivos.
@@ -10,7 +10,7 @@ Instala `AirPods-Companion-v1.0.0.apk`.
 
 ## Google Play
 
-`AirPods-Companion-v1.0.0.aab` está destinado a Google Play Console. No se instala directamente en un teléfono.
+`AirPods-Companion-v1.0.1.aab` está destinado a Google Play Console. No se instala directamente en un teléfono.
 
 ## Integridad
 

@@ -11,19 +11,6 @@ static jclass GetBluetoothA2dpClass(JNIEnv *env) {
     return env->FindClass("android/bluetooth/BluetoothA2dp");
 }
 
-static jmethodID FindNoArgMethod(JNIEnv *env, jobject obj, const char *name, const char *sig = "()Ljava/lang/Object;") {
-    jclass cls = env->GetObjectClass(obj);
-    if (!cls) return nullptr;
-    jmethodID method = env->GetMethodID(cls, name, sig);
-    if (!method) {
-        cls = env->FindClass("android/bluetooth/BluetoothA2dp");
-        if (cls) {
-            method = env->GetMethodID(cls, name, sig);
-        }
-    }
-    return method;
-}
-
 JNIEXPORT jobject JNICALL
 Java_com_soren_airpodscompanion_HiddenBluetoothCompat_00024NativeHiddenApiBridge_getCodecConfigNative(
         JNIEnv *env, jclass, jobject a2dp) {

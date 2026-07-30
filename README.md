@@ -101,12 +101,12 @@ Puede desactivarse para una compilación concreta con:
 .\gradlew.bat -PenableHiddenApiNativeBridge=false assembleDebug
 ```
 
-> **Nota sobre `v1.0.0`:** los APK y AAB adjuntos a esa Release se generaron antes de activar el puente por defecto. El cambio está presente en el código de `main` desde el commit `4f8128d` y requiere generar una nueva compilación para llegar a un binario descargable.
+Desde `v1.0.1`, los binarios publicados incluyen el puente nativo activado por defecto. Su disponibilidad efectiva sigue dependiendo del fabricante, la versión de Android y las restricciones del sistema.
 
 ## Descargar e instalar
 
 1. Abre la [última versión publicada](https://github.com/neydermarquez/AirPodsCompanion/releases/latest).
-2. Descarga `AirPods-Companion-v1.0.0.apk`.
+2. Descarga `AirPods-Companion-v1.0.1.apk`.
 3. Abre el archivo en tu dispositivo Android.
 4. Si Android lo solicita, autoriza temporalmente la instalación desde el navegador o gestor de archivos.
 
@@ -117,7 +117,7 @@ Requiere Android 7.0 (API 24) o posterior. El archivo `.aab` de la publicación 
 La publicación incluye `SHA256SUMS.txt`. En Windows puedes comprobar el APK con:
 
 ```powershell
-Get-FileHash .\AirPods-Companion-v1.0.0.apk -Algorithm SHA256
+Get-FileHash .\AirPods-Companion-v1.0.1.apk -Algorithm SHA256
 ```
 
 ## Privacidad
@@ -178,7 +178,7 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 
 ## Estado del proyecto
 
-La versión pública actual es `v1.0.0`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
+La versión pública actual es `v1.0.1`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
 
 Consulta la [trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md) y la [matriz de pruebas de hardware](HARDWARE_TEST_MATRIX.md) para conocer el estado exacto de cada área.
 
