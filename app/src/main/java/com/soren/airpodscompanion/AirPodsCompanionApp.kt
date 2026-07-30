@@ -18,7 +18,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,7 +77,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
@@ -869,7 +867,16 @@ private fun HomeDeviceHero(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(18.dp))
+            Image(
+                painter = painterResource(R.drawable.airpods_product_render),
+                contentDescription = "Dos auriculares inalámbricos y su estuche de carga",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(126.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(Modifier.height(4.dp))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
@@ -881,18 +888,14 @@ private fun HomeDeviceHero(
                     fresh = earbudsBatteryFresh(device),
                     modifier = Modifier.weight(1f),
                     connected = connected
-                ) {
-                    EarbudsIllustration(connected)
-                }
+                )
                 DeviceVisual(
                     label = "Estuche",
                     battery = batteryText(device?.battery?.case),
                     fresh = device?.battery?.case?.isFresh() == true,
                     modifier = Modifier.weight(1f),
                     connected = connected
-                ) {
-                    CaseIllustration(connected)
-                }
+                )
             }
 
             if (state.status in listOf(
@@ -938,8 +941,7 @@ private fun DeviceVisual(
     battery: String,
     fresh: Boolean,
     modifier: Modifier,
-    connected: Boolean,
-    illustration: @Composable () -> Unit
+    connected: Boolean
 ) {
     Column(
         modifier.semantics {
@@ -948,13 +950,6 @@ private fun DeviceVisual(
         },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier.fillMaxWidth().height(116.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            illustration()
-        }
-        Spacer(Modifier.height(8.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(2.dp))
         Text(
@@ -971,108 +966,6 @@ private fun DeviceVisual(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun EarbudsIllustration(connected: Boolean) {
-    val body = Color(0xFFF8FAFC)
-    val edge = Color(0xFFCAD3DE)
-    val detail = Color(0xFF52606F)
-    val alpha = if (connected) 1f else .52f
-    Canvas(
-        Modifier.size(width = 132.dp, height = 108.dp)
-            .semantics { contentDescription = "Representación de dos auriculares" }
-    ) {
-        fun drawEarbud(centerX: Float, mirrored: Boolean) {
-            val headLeft = centerX - 22.dp.toPx()
-            val headTop = 17.dp.toPx()
-            drawOval(
-                color = Color.Black.copy(alpha = .06f * alpha),
-                topLeft = androidx.compose.ui.geometry.Offset(headLeft + 2.dp.toPx(), headTop + 5.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(44.dp.toPx(), 39.dp.toPx())
-            )
-            drawOval(
-                color = body.copy(alpha = alpha),
-                topLeft = androidx.compose.ui.geometry.Offset(headLeft, headTop),
-                size = androidx.compose.ui.geometry.Size(44.dp.toPx(), 39.dp.toPx())
-            )
-            drawOval(
-                color = edge.copy(alpha = alpha),
-                topLeft = androidx.compose.ui.geometry.Offset(headLeft, headTop),
-                size = androidx.compose.ui.geometry.Size(44.dp.toPx(), 39.dp.toPx()),
-                style = Stroke(1.dp.toPx())
-            )
-            drawRoundRect(
-                color = body.copy(alpha = alpha),
-                topLeft = androidx.compose.ui.geometry.Offset(centerX - 8.dp.toPx(), 44.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(16.dp.toPx(), 49.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx())
-            )
-            drawRoundRect(
-                color = edge.copy(alpha = alpha),
-                topLeft = androidx.compose.ui.geometry.Offset(centerX - 8.dp.toPx(), 44.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(16.dp.toPx(), 49.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
-                style = Stroke(1.dp.toPx())
-            )
-            val ventX = centerX + (if (mirrored) -14 else 8).dp.toPx()
-            drawRoundRect(
-                color = detail.copy(alpha = .9f * alpha),
-                topLeft = androidx.compose.ui.geometry.Offset(ventX, 28.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(7.dp.toPx(), 15.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
-            )
-            drawCircle(
-                color = detail.copy(alpha = .58f * alpha),
-                radius = 2.dp.toPx(),
-                center = androidx.compose.ui.geometry.Offset(centerX, 88.dp.toPx())
-            )
-        }
-        drawEarbud(size.width * .34f, false)
-        drawEarbud(size.width * .66f, true)
-    }
-}
-
-@Composable
-private fun CaseIllustration(connected: Boolean) {
-    val body = Color(0xFFF8FAFC)
-    val edge = Color(0xFFCAD3DE)
-    val alpha = if (connected) 1f else .52f
-    Canvas(
-        Modifier.size(width = 142.dp, height = 108.dp)
-            .semantics { contentDescription = "Representación del estuche de carga" }
-    ) {
-        drawRoundRect(
-            color = Color.Black.copy(alpha = .07f * alpha),
-            topLeft = androidx.compose.ui.geometry.Offset(8.dp.toPx(), 24.dp.toPx()),
-            size = androidx.compose.ui.geometry.Size(size.width - 16.dp.toPx(), 72.dp.toPx()),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(27.dp.toPx())
-        )
-        drawRoundRect(
-            color = body.copy(alpha = alpha),
-            topLeft = androidx.compose.ui.geometry.Offset(6.dp.toPx(), 20.dp.toPx()),
-            size = androidx.compose.ui.geometry.Size(size.width - 12.dp.toPx(), 72.dp.toPx()),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(27.dp.toPx())
-        )
-        drawRoundRect(
-            color = edge.copy(alpha = alpha),
-            topLeft = androidx.compose.ui.geometry.Offset(6.dp.toPx(), 20.dp.toPx()),
-            size = androidx.compose.ui.geometry.Size(size.width - 12.dp.toPx(), 72.dp.toPx()),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(27.dp.toPx()),
-            style = Stroke(1.dp.toPx())
-        )
-        drawLine(
-            color = edge.copy(alpha = .8f * alpha),
-            start = androidx.compose.ui.geometry.Offset(9.dp.toPx(), 48.dp.toPx()),
-            end = androidx.compose.ui.geometry.Offset(size.width - 9.dp.toPx(), 48.dp.toPx()),
-            strokeWidth = 1.dp.toPx()
-        )
-        drawCircle(
-            color = if (connected) Color(0xFF24B47E) else edge.copy(alpha = alpha),
-            radius = 2.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(size.width / 2f, 63.dp.toPx())
-        )
     }
 }
 
