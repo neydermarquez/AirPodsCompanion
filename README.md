@@ -36,10 +36,12 @@ La versión actual utiliza una interfaz clara única, con superficies suaves, na
 ## Funciones principales
 
 - Reconocimiento automático de AirPods vinculados y conectados.
-- Búsqueda de dispositivos cercanos y emparejamiento mediante Android.
-- Estado real de Bluetooth, conexión, desconexión y reconexión.
-- Batería general o individual cuando el modelo la publique.
-- Vigencia y fuente de cada lectura de batería.
+- Búsqueda automática de dispositivos cercanos, reconocimiento de nombres publicados tardíamente y emparejamiento mediante Android.
+- Estado real de Bluetooth, conexión, desconexión y reconexión, con intento directo de A2DP/HFP y acceso guiado a Bluetooth del sistema cuando el fabricante lo exige.
+- Batería general real mediante eventos HFP y el nivel que publique la pila Bluetooth de Android.
+- Actualización inmediata por eventos y comprobación de respaldo cada 15 segundos mientras exista conexión.
+- Presentación separada de izquierda, derecha y estuche únicamente cuando el teléfono publique esas lecturas; nunca se completan con valores simulados.
+- Vigencia, estado de carga y fuente de cada lectura de batería, conservando el último valor conocido sin confundirlo con una lectura actual.
 - Controles multimedia compatibles: reproducción, pausa, pistas y volumen.
 - Diagnóstico de rutas multimedia, micrófono y llamadas.
 - Audio espacial y seguimiento de cabeza cuando Android los exponga.
@@ -47,9 +49,10 @@ La versión actual utiliza una interfaz clara única, con superficies suaves, na
 - Notificaciones configurables y supervisión opcional en segundo plano.
 - Widget de conexión y batería.
 - Información de compatibilidad por modelo y capacidad.
-- Perfiles para música, llamadas, juegos y oficina.
+- Perfiles para música, llamadas, juegos y oficina que aplican volumen y preferencias de avisos al seleccionarlos.
 - Preferencias independientes de volumen, avisos y diagnósticos por perfil.
 - Exportación y eliminación de los datos locales.
+- Acceso seguro a Buscar en iCloud mediante una pestaña administrada por el navegador.
 
 ## Más de lo que muestra la pantalla principal
 
@@ -80,6 +83,8 @@ AirPods Companion incluye un laboratorio local para registrar y comparar señale
 
 Una capacidad pendiente solo puede pasar a **Detectable** cuando existen diferencias estables y reproducibles en tres o más muestras. Las sesiones pueden compararse, eliminarse o exportarse de forma anónima con autorización del usuario.
 
+Todo el flujo principal se ejecuta dentro de la aplicación, desde **Actividad > Laboratorio**, usando únicamente el teléfono. La app guía cada transición, exige tres sesiones independientes y compara la evidencia localmente. ADB y los registros HCI son herramientas opcionales para investigación avanzada del desarrollador; ningún usuario los necesita para utilizar o probar el producto.
+
 ## Estados transparentes
 
 Cada capacidad se presenta con un estado explícito:
@@ -91,9 +96,11 @@ Cada capacidad se presenta con un estado explícito:
 - **No disponible:** Android no ofrece una API pública compatible.
 - **Pendiente de evidencia:** requiere validación reproducible con hardware real.
 
-Funciones propietarias como Buscar, iCloud, Siri, actualización de firmware y personalizaciones exclusivas del ecosistema Apple no se presentan como disponibles en Android.
+Funciones propietarias como Buscar, iCloud, Siri, actualización de firmware y personalizaciones exclusivas del ecosistema Apple no se presentan como controlables desde Android. Para Buscar, la aplicación ofrece un acceso directo a `iCloud.com/find` dentro de una pestaña segura administrada por el navegador; Apple conserva la sesión y AirPods Companion no recibe credenciales, cookies ni ubicaciones.
 
 El código fuente actual compila y carga por defecto un puente nativo experimental para ampliar el diagnóstico Bluetooth cuando el dispositivo lo permita. El puente intenta primero la ruta JNI y conserva una ruta de respaldo por reflexión; cualquier fallo se trata de forma segura y no convierte una API no disponible en una capacidad garantizada.
+
+Android define metadatos de batería izquierda, derecha y estuche, pero su lectura requiere el permiso de sistema `BLUETOOTH_PRIVILEGED`. AirPods Companion no solicita ni presupone ese permiso en una instalación normal. Por ello, muestra batería individual solo si llega por una señal observable y reproducible permitida al teléfono; de lo contrario muestra exclusivamente la batería general real.
 
 Puede desactivarse para una compilación concreta con:
 
@@ -128,6 +135,7 @@ Get-FileHash .\AirPods-Companion-v1.0.1.apk -Algorithm SHA256
 - Sin recopilación ni almacenamiento de ubicación.
 - Sin transmisión automática de diagnósticos.
 - Historial y evidencia técnica eliminables desde la aplicación.
+- El acceso opcional a Buscar abre el sitio oficial de Apple; su sesión permanece aislada en el navegador.
 
 En Android 11 o versiones anteriores, el sistema puede asociar el escaneo Bluetooth con el permiso de ubicación debido a su modelo histórico de permisos. AirPods Companion no utiliza ese permiso para obtener ni guardar la ubicación del usuario. En Android 12 o posterior se emplean los permisos de dispositivos cercanos.
 
@@ -171,6 +179,7 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 - Room
 - ViewModel y restauración de estado
 - Companion Device Manager
+- Android Custom Tabs para el acceso aislado a iCloud Buscar
 - JNI, Android NDK y CMake para el puente Bluetooth experimental
 - Servicios y notificaciones de Android
 - Widgets de aplicación
@@ -185,6 +194,7 @@ Consulta la [trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md) y la [ma
 ## Documentación
 
 - [Matriz de validación física](HARDWARE_TEST_MATRIX.md)
+- [Guía segura de captura Bluetooth](docs/AIRPODS_CAPTURE_GUIDE.md)
 - [Trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md)
 - [Guía de compilación y publicación](docs/release/RELEASE_GUIDE.md)
 - [Migración e identidad del paquete](docs/release/MIGRATION.md)

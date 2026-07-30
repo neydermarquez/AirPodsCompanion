@@ -130,4 +130,47 @@ Java_com_soren_airpodscompanion_HiddenBluetoothCompat_00024NativeHiddenApiBridge
     return env->CallIntMethod(adapter, getLeConnectionState, device);
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_soren_airpodscompanion_HiddenBluetoothCompat_00024NativeHiddenApiBridge_connectProfileNative(
+        JNIEnv *env, jclass, jobject profile, jobject device) {
+    if (!profile || !device) return JNI_FALSE;
+    jclass profileClass = env->GetObjectClass(profile);
+    if (!profileClass) return JNI_FALSE;
+
+    jmethodID connect = env->GetMethodID(
+            profileClass,
+            "connect",
+            "(Landroid/bluetooth/BluetoothDevice;)Z");
+    if (!connect) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        return JNI_FALSE;
+    }
+    jboolean result = env->CallBooleanMethod(profile, connect, device);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return JNI_FALSE;
+    }
+    return result;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_soren_airpodscompanion_HiddenBluetoothCompat_00024NativeHiddenApiBridge_getBatteryLevelNative(
+        JNIEnv *env, jclass, jobject device) {
+    if (!device) return -1;
+    jclass deviceClass = env->GetObjectClass(device);
+    if (!deviceClass) return -1;
+
+    jmethodID getBatteryLevel = env->GetMethodID(deviceClass, "getBatteryLevel", "()I");
+    if (!getBatteryLevel) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        return -1;
+    }
+    jint result = env->CallIntMethod(device, getBatteryLevel);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return -1;
+    }
+    return result;
+}
+
 }

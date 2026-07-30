@@ -2,7 +2,8 @@ package com.soren.airpodscompanion
 
 enum class BatterySignalSource(val label: String) {
     APPLE_ACCESSORY("Evento Apple del perfil manos libres"),
-    ANDROID_XEVENT("Evento estándar del perfil manos libres")
+    ANDROID_XEVENT("Evento estándar del perfil manos libres"),
+    ANDROID_DEVICE("Nivel publicado por la pila Bluetooth de Android")
 }
 
 data class ParsedBatterySignal(

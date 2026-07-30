@@ -56,7 +56,7 @@ fun PrivacySection(onExportAll: () -> Unit, onDeleteAll: () -> Unit) {
             PrivacyRow(
                 Icons.Outlined.Shield,
                 "Procesamiento local",
-                "Sin cuenta de Apple. Los diagnósticos no se transmiten automáticamente.",
+                "La cuenta de iCloud permanece aislada en el navegador. Los diagnósticos no se transmiten automáticamente.",
                 "Privado"
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
