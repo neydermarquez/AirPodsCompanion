@@ -491,7 +491,14 @@ private fun AppShell(
                     modifier = Modifier.weight(1f)
                 ) {
                     composable(AppDestination.HOME.route) {
-                        HomeScreen(bluetoothState, onPermission, onEnableBluetooth, onScan)
+                        HomeScreen(
+                            bluetoothState,
+                            monitorStatus,
+                            monitoringEnabled,
+                            onPermission,
+                            onEnableBluetooth,
+                            onScan
+                        )
                     }
                     composable(AppDestination.DEVICES.route) {
                         DevicesScreen(
@@ -751,13 +758,21 @@ private fun TopBar() {
 }
 
 @Composable
-private fun HomeScreen(state: BluetoothUiState, onPermission: () -> Unit, onEnableBluetooth: () -> Unit, onScan: () -> Unit) {
+private fun HomeScreen(
+    state: BluetoothUiState,
+    monitorStatus: MonitorStatus,
+    monitoringEnabled: Boolean,
+    onPermission: () -> Unit,
+    onEnableBluetooth: () -> Unit,
+    onScan: () -> Unit
+) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         HomeDeviceHero(state, onPermission, onEnableBluetooth, onScan)
-        HomeEssentials(state)
+        SectionHeader("Accesos rápidos", "Esenciales")
+        HomeEssentials(monitorStatus, monitoringEnabled)
         Spacer(Modifier.height(96.dp))
     }
 }
@@ -994,8 +1009,12 @@ private fun earbudsBatteryText(device: AirPodsDevice?): String {
 }
 
 @Composable
-private fun HomeEssentials(state: BluetoothUiState) {
-    val connected = state.connectedDevice
+private fun HomeEssentials(
+    monitorStatus: MonitorStatus,
+    monitoringEnabled: Boolean
+) {
+    val context = LocalContext.current
+    var launchError by remember { mutableStateOf(false) }
     Surface(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1005,33 +1024,93 @@ private fun HomeEssentials(state: BluetoothUiState) {
             MaterialTheme.colorScheme.outline.copy(alpha = .14f)
         )
     ) {
-        Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            androidx.compose.material3.Icon(
-                if (connected != null) Icons.Outlined.Bluetooth else Icons.Outlined.Shield,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(21.dp)
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            HomeQuickRow(
+                icon = Icons.Outlined.Timeline,
+                title = "Supervisión",
+                detail = if (monitoringEnabled) {
+                    monitorStatus.detail
+                } else {
+                    "Actívala en Ajustes para vigilar conexión y batería"
+                },
+                status = if (monitoringEnabled) monitorStatus.state.label else "Desactivada"
             )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    if (connected != null) "Conexión activa" else "Detección privada",
-                    fontWeight = FontWeight.SemiBold
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            HomeQuickRow(
+                icon = Icons.Outlined.LocationOn,
+                title = "Buscar en iCloud",
+                detail = "Abre Buscar en una pestaña segura administrada por Apple",
+                status = "Abrir",
+                onClick = {
+                    launchError = !ICloudFindLauncher.open(context)
+                }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            Row(
+                Modifier.padding(vertical = 13.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                androidx.compose.material3.Icon(
+                    Icons.Outlined.Shield,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(17.dp)
                 )
+                Spacer(Modifier.width(9.dp))
                 Text(
-                    if (connected != null) {
-                        "Bluetooth de Android · datos reales disponibles"
+                    if (launchError) {
+                        "No hay un navegador compatible con pestañas seguras."
                     } else {
-                        "Local, automática y sin cuenta de Apple"
+                        "Los datos Bluetooth permanecen en este teléfono. " +
+                            "AirPods Companion no lee la cuenta ni la ubicación de iCloud."
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (launchError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HomeQuickRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    detail: String,
+    status: String,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        Modifier.fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .sizeIn(minHeight = 64.dp)
+            .padding(vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        androidx.compose.material3.Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(21.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            status,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.End
+        )
     }
 }
 
@@ -2484,7 +2563,7 @@ private fun PreferencesGroup(
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
     ) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            SettingLikeRow(Icons.Outlined.Shield, "Privacidad", "Procesamiento local, sin cuenta de Apple", "Incluido")
+        SettingLikeRow(Icons.Outlined.Shield, "Privacidad", "Procesamiento local y control de tus datos", "Incluido")
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             NotificationSettingRow(
                 "Avisar al conectar",
