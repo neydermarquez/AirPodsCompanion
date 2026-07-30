@@ -12,6 +12,7 @@ if (signingPropertiesFile.isFile) {
 }
 val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
     .all { !signingProperties.getProperty(it).isNullOrBlank() }
+val useHiddenApiNativeBridge = providers.gradleProperty("enableHiddenApiNativeBridge").orElse("false").get().toBoolean()
 
 android {
     namespace = "com.soren.airpodscompanion"
@@ -28,6 +29,13 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
+        if (useHiddenApiNativeBridge) {
+            externalNativeBuild {
+                cmake {
+                    cppFlags += "-Wall"
+                }
+            }
+        }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -42,6 +50,13 @@ android {
                 enableV2Signing = true
                 enableV3Signing = true
                 enableV4Signing = true
+            }
+        }
+    }
+    if (useHiddenApiNativeBridge) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
             }
         }
     }

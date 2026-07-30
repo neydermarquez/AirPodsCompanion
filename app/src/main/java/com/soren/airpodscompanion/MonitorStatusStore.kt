@@ -10,6 +10,7 @@ enum class MonitorState(val label: String) {
     DISABLED("Desactivado"),
     STARTING("Iniciando"),
     RUNNING("Activo"),
+    WARNING("Activo con limitaciones"),
     STOPPED("Detenido")
 }
 

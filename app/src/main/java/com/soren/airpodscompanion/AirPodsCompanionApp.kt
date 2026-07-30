@@ -958,6 +958,16 @@ private fun DevicesScreen(
     diagnostics: AudioDiagnostics
 ) {
     val connectedDevice = state.connectedDevice
+    val context = LocalContext.current
+    var connectedAudioState by remember(connectedDevice?.address) {
+        mutableStateOf(diagnostics.inspect())
+    }
+    LaunchedEffect(connectedDevice?.address) {
+        while (connectedDevice != null) {
+            connectedAudioState = diagnostics.inspect()
+            delay(1_000)
+        }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         SectionHeader("Dispositivos", "Detección automática")
         DeviceDiscoveryPanel(state, onPermission, onEnableBluetooth, onScan)
@@ -970,7 +980,16 @@ private fun DevicesScreen(
             SectionHeader("Multimedia", "Control del sistema")
             MediaControlPanel(mediaControls)
             SectionHeader("Estado de audio", "Lecturas actuales de Android")
-            ConnectedAudioStatusPanel(diagnostics.inspect())
+            ConnectedAudioStatusPanel(
+                connectedAudioState,
+                onToggleMicrophone = {
+                    diagnostics.toggleMicrophone()
+                    connectedAudioState = diagnostics.inspect()
+                }
+            )
+            ConnectedDeviceActionsPanel {
+                context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+            }
             SectionHeader("Funciones del modelo", "Compatibilidad completa")
             ConnectedFeatureInventory(connectedDevice)
         }
@@ -1003,7 +1022,10 @@ private fun DevicesScreen(
 }
 
 @Composable
-private fun ConnectedAudioStatusPanel(state: AudioDiagnosticState) {
+private fun ConnectedAudioStatusPanel(
+    state: AudioDiagnosticState,
+    onToggleMicrophone: () -> Unit
+) {
     Surface(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1032,6 +1054,39 @@ private fun ConnectedAudioStatusPanel(state: AudioDiagnosticState) {
                 }
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+            Row(
+                Modifier.fillMaxWidth()
+                    .sizeIn(minHeight = 48.dp)
+                    .semantics {
+                        role = Role.Button
+                        stateDescription = when {
+                            !state.callActive -> "No disponible, no hay una llamada activa"
+                            !state.bluetoothMicrophone -> "No disponible en la ruta actual"
+                            state.microphoneMuted -> "Micrófono silenciado"
+                            else -> "Micrófono activo"
+                        }
+                    }
+                    .clickable(
+                        enabled = state.callActive && state.bluetoothMicrophone,
+                        onClick = onToggleMicrophone
+                    )
+                    .padding(vertical = 15.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (state.microphoneMuted) "Activar micrófono" else "Silenciar micrófono",
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    if (state.callActive && state.bluetoothMicrophone) "Controlar" else "No disponible",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (state.callActive && state.bluetoothMicrophone) {
+                        MaterialTheme.colorScheme.primary
+                    } else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             CompatibilityLine(
                 "Audio espacial de Android",
                 when {
@@ -1048,6 +1103,52 @@ private fun ConnectedAudioStatusPanel(state: AudioDiagnosticState) {
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             CompatibilityLine("Firmware", "No publicado por Android")
+        }
+    }
+}
+
+@Composable
+private fun ConnectedDeviceActionsPanel(onBluetoothSettings: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+            .sizeIn(minHeight = 48.dp)
+            .semantics {
+                role = Role.Button
+                contentDescription = "Administrar nombre y vinculación en los ajustes Bluetooth de Android"
+            }
+            .clickable(onClick = onBluetoothSettings),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .46f),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = .14f)
+        )
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            androidx.compose.material3.Icon(
+                Icons.Outlined.Bluetooth,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Administrar dispositivo", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Nombre, vinculación y opciones disponibles en Android",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                "Abrir",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

@@ -75,6 +75,7 @@ data class BluetoothUiState(
 class BluetoothController(private val context: Context) {
     private val manager = context.getSystemService(BluetoothManager::class.java)
     private val adapter: BluetoothAdapter? get() = manager?.adapter
+    private val hiddenCompat = HiddenBluetoothCompat(context)
     private val _state = MutableStateFlow(BluetoothUiState(history = ConnectionHistoryStore(context).load()))
     val state: StateFlow<BluetoothUiState> = _state.asStateFlow()
     private val found = linkedMapOf<String, AirPodsDevice>()
@@ -558,6 +559,52 @@ class BluetoothController(private val context: Context) {
     @SuppressLint("MissingPermission")
     private fun BluetoothAdapter.cancelDiscoverySafely() {
         if (hasPermissions() && isDiscovering) runCatching { cancelDiscovery() }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getCurrentA2dpCodecConfig(): String? {
+        val a2dp = proxies[BluetoothProfile.A2DP] as? BluetoothA2dp ?: return null
+        return hiddenCompat.getA2dpCodecConfig(a2dp)?.toString()
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getA2dpCodecStatus(): String? {
+        val a2dp = proxies[BluetoothProfile.A2DP] as? BluetoothA2dp ?: return null
+        return hiddenCompat.getA2dpCodecStatus(a2dp)?.toString()
+    }
+
+    @SuppressLint("MissingPermission")
+    fun setA2dpCodecPreference(codecConfig: Any): Boolean {
+        val a2dp = proxies[BluetoothProfile.A2DP] as? BluetoothA2dp ?: return false
+        return hiddenCompat.setA2dpCodecPreference(a2dp, codecConfig)
+    }
+
+    fun setA2dpAudioPolicy(enabled: Boolean): Boolean {
+        return hiddenCompat.setBluetoothA2dpEnabled(enabled)
+    }
+
+    fun getAudioParams(keys: String): String? {
+        return hiddenCompat.getAudioParameters(keys)
+    }
+
+    fun setAudioParams(keyValuePairs: String): Boolean {
+        return hiddenCompat.setAudioParameters(keyValuePairs)
+    }
+
+    fun getLowLevelAdapterConnectionState(): Int? {
+        return hiddenCompat.getAdapterConnectionState()
+    }
+
+    @SuppressLint("MissingPermission")
+    fun disconnectDeviceFromAdapter(deviceAddress: String): Boolean {
+        val target = runCatching { adapter?.getRemoteDevice(deviceAddress) }.getOrNull() ?: return false
+        return hiddenCompat.disconnectFromAdapter(target)
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getLowLevelLeConnectionState(deviceAddress: String): Int? {
+        val target = runCatching { adapter?.getRemoteDevice(deviceAddress) }.getOrNull() ?: return null
+        return hiddenCompat.getAdapterLeConnectionState(target)
     }
 
     private fun ByteArray.toHex() = joinToString("") { "%02X".format(it.toInt() and 0xFF) }
