@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
@@ -751,84 +753,52 @@ private fun TopBar() {
 
 @Composable
 private fun HomeScreen(state: BluetoothUiState, onPermission: () -> Unit, onEnableBluetooth: () -> Unit, onScan: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        ConnectionCard(state, onPermission, onEnableBluetooth, onScan)
-        SectionHeader("Qué podrás consultar", "Al conectar")
-        HomeCapabilities()
-        PrivacyNote()
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        HomeDeviceHero(state, onPermission, onEnableBluetooth, onScan)
+        HomeEssentials(state)
         Spacer(Modifier.height(96.dp))
     }
 }
 
 @Composable
-private fun HomeCapabilities() {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
-    ) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            CapabilityRow(0, "Batería", "Auriculares y estuche compatibles")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            CapabilityRow(1, "Compatibilidad", "Funciones disponibles para tu modelo")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            CapabilityRow(2, "Diagnóstico", "Conexión, permisos y estado")
-        }
-    }
-}
-
-@Composable
-private fun CapabilityRow(index: Int, title: String, detail: String) {
-    val icon = when (index) {
-        0 -> Icons.Outlined.Headphones
-        1 -> Icons.Outlined.Shield
-        else -> Icons.Outlined.Timeline
-    }
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 15.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-            androidx.compose.material3.Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(21.dp)
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(2.dp))
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun ConnectionCard(state: BluetoothUiState, onPermission: () -> Unit, onEnableBluetooth: () -> Unit, onScan: () -> Unit) {
-    val connected = state.connectedDevice
+private fun HomeDeviceHero(
+    state: BluetoothUiState,
+    onPermission: () -> Unit,
+    onEnableBluetooth: () -> Unit,
+    onScan: () -> Unit
+) {
+    val device = state.connectedDevice
+    val connected = device != null
     val statusTitle = when (state.status) {
         BluetoothStatus.PERMISSION_REQUIRED -> "Permiso necesario"
         BluetoothStatus.DISABLED -> "Bluetooth apagado"
         BluetoothStatus.UNSUPPORTED -> "Bluetooth no disponible"
-        BluetoothStatus.PAIRING -> "Emparejando AirPods"
-        BluetoothStatus.RECONNECTING -> "Reconectando AirPods"
-        BluetoothStatus.CONNECTED -> connected?.name ?: "AirPods conectados"
+        BluetoothStatus.PAIRING -> "Emparejando"
+        BluetoothStatus.RECONNECTING -> "Reconectando"
+        BluetoothStatus.CONNECTED -> "Conectados"
         BluetoothStatus.ERROR -> "No se pudo buscar"
-        else -> "Buscando AirPods"
+        BluetoothStatus.READY -> "Listos para conectar"
+        BluetoothStatus.SEARCHING -> "Buscando"
     }
     val statusDetail = when (state.status) {
-        BluetoothStatus.CONNECTED -> "Conectado mediante Bluetooth"
         BluetoothStatus.PERMISSION_REQUIRED -> "Autoriza dispositivos cercanos"
-        BluetoothStatus.DISABLED -> "Actívalo para continuar"
+        BluetoothStatus.DISABLED -> "Activa Bluetooth para continuar"
+        BluetoothStatus.UNSUPPORTED -> "Este teléfono no ofrece Bluetooth compatible"
         BluetoothStatus.PAIRING -> "Confirma la solicitud de Android"
-        BluetoothStatus.RECONNECTING -> "Restaurando perfiles de audio"
-        BluetoothStatus.READY -> "Listo para buscar"
-        BluetoothStatus.ERROR -> state.error ?: "Inténtalo nuevamente"
-        else -> "Detección automática activa"
+        BluetoothStatus.RECONNECTING -> "Restaurando la conexión de audio"
+        BluetoothStatus.CONNECTED -> device?.identifiedModel ?: "Audio Bluetooth activo"
+        BluetoothStatus.ERROR -> state.error ?: "Vuelve a intentarlo"
+        BluetoothStatus.READY -> "Abre el estuche y mantenlo cerca"
+        BluetoothStatus.SEARCHING -> "Detección automática en curso"
+    }
+    val actionLabel = when (state.status) {
+        BluetoothStatus.PERMISSION_REQUIRED -> "Autorizar"
+        BluetoothStatus.DISABLED -> "Activar Bluetooth"
+        BluetoothStatus.READY, BluetoothStatus.ERROR -> "Buscar ahora"
+        else -> null
     }
     val action = when (state.status) {
         BluetoothStatus.PERMISSION_REQUIRED -> onPermission
@@ -836,74 +806,338 @@ private fun ConnectionCard(state: BluetoothUiState, onPermission: () -> Unit, on
         BluetoothStatus.READY, BluetoothStatus.ERROR -> onScan
         else -> null
     }
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = .52f))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .22f), RoundedCornerShape(22.dp))
-            .semantics {
-                liveRegion = LiveRegionMode.Polite
-                stateDescription = "$statusTitle. $statusDetail"
-            }
-            .padding(18.dp)
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Icon(
-                    Icons.Outlined.Headphones,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(25.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(statusTitle, fontWeight = FontWeight.SemiBold)
-                Text(statusDetail, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (state.status in listOf(BluetoothStatus.SEARCHING, BluetoothStatus.PAIRING, BluetoothStatus.RECONNECTING)) CircularProgressIndicator(
-                modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp
-            )
-        }
-        Spacer(Modifier.height(20.dp))
-        Text(if (connected != null) "Dispositivo reconocido" else "Tus AirPods aparecerán aquí", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "Si ya están conectados por Bluetooth, la app los reconocerá automáticamente. Si no, abre el estuche y mantenlos cerca.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 20.sp
+
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = .62f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = .18f)
         )
-        Spacer(Modifier.height(16.dp))
-        Surface(
-            Modifier.fillMaxWidth().then(
-                if (action != null) {
-                    Modifier
-                        .sizeIn(minHeight = 48.dp)
-                        .semantics { role = Role.Button }
-                        .clickable { action() }
-                } else Modifier
-            ),
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .42f),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
+    ) {
+        Column(
+            Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
-                Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                androidx.compose.material3.Icon(Icons.Outlined.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
-                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(if (action != null) statusDetail else "Conexión inteligente", fontWeight = FontWeight.SemiBold)
-                    Text(if (connected != null) "Perfil de audio activo" else "Vinculados y dispositivos cercanos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        device?.name ?: "Tus AirPods",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        statusDetail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = if (connected) {
+                        Color(0xFF1FAF83).copy(alpha = .12f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .6f)
+                    }
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            Modifier.size(7.dp).clip(RoundedCornerShape(50))
+                                .background(
+                                    if (connected) Color(0xFF1FAF83)
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .45f)
+                                )
+                        )
+                        Text(
+                            statusTitle,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (connected) Color(0xFF147A60)
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                DeviceVisual(
+                    label = "Auriculares",
+                    battery = earbudsBatteryText(device),
+                    fresh = earbudsBatteryFresh(device),
+                    modifier = Modifier.weight(1f),
+                    connected = connected
+                ) {
+                    EarbudsIllustration(connected)
+                }
+                DeviceVisual(
+                    label = "Estuche",
+                    battery = batteryText(device?.battery?.case),
+                    fresh = device?.battery?.case?.isFresh() == true,
+                    modifier = Modifier.weight(1f),
+                    connected = connected
+                ) {
+                    CaseIllustration(connected)
+                }
+            }
+
+            if (state.status in listOf(
+                    BluetoothStatus.SEARCHING,
+                    BluetoothStatus.PAIRING,
+                    BluetoothStatus.RECONNECTING
+                )
+            ) {
+                Spacer(Modifier.height(18.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 2.dp
+                )
+            } else if (action != null && actionLabel != null) {
+                Spacer(Modifier.height(18.dp))
+                Surface(
+                    Modifier.fillMaxWidth().sizeIn(minHeight = 48.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = actionLabel
+                        }
+                        .clickable(onClick = action),
+                    shape = RoundedCornerShape(15.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Text(
+                        actionLabel,
+                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun DeviceVisual(
+    label: String,
+    battery: String,
+    fresh: Boolean,
+    modifier: Modifier,
+    connected: Boolean,
+    illustration: @Composable () -> Unit
+) {
+    Column(
+        modifier.semantics {
+            contentDescription = "$label. $battery" +
+                if (fresh) "" else ". Sin lectura actual"
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            Modifier.fillMaxWidth().height(116.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            illustration()
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(2.dp))
         Text(
-            "La detección se realiza en este dispositivo y requiere Bluetooth.",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (connected) battery else "—",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = if (fresh) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (connected && !fresh) {
+            Text(
+                "Sin lectura",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun EarbudsIllustration(connected: Boolean) {
+    val body = Color(0xFFF8FAFC)
+    val edge = Color(0xFFCAD3DE)
+    val detail = Color(0xFF52606F)
+    val alpha = if (connected) 1f else .52f
+    Canvas(
+        Modifier.size(width = 132.dp, height = 108.dp)
+            .semantics { contentDescription = "Representación de dos auriculares" }
+    ) {
+        fun drawEarbud(centerX: Float, mirrored: Boolean) {
+            val headLeft = centerX - 22.dp.toPx()
+            val headTop = 17.dp.toPx()
+            drawOval(
+                color = Color.Black.copy(alpha = .06f * alpha),
+                topLeft = androidx.compose.ui.geometry.Offset(headLeft + 2.dp.toPx(), headTop + 5.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(44.dp.toPx(), 39.dp.toPx())
+            )
+            drawOval(
+                color = body.copy(alpha = alpha),
+                topLeft = androidx.compose.ui.geometry.Offset(headLeft, headTop),
+                size = androidx.compose.ui.geometry.Size(44.dp.toPx(), 39.dp.toPx())
+            )
+            drawOval(
+                color = edge.copy(alpha = alpha),
+                topLeft = androidx.compose.ui.geometry.Offset(headLeft, headTop),
+                size = androidx.compose.ui.geometry.Size(44.dp.toPx(), 39.dp.toPx()),
+                style = Stroke(1.dp.toPx())
+            )
+            drawRoundRect(
+                color = body.copy(alpha = alpha),
+                topLeft = androidx.compose.ui.geometry.Offset(centerX - 8.dp.toPx(), 44.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(16.dp.toPx(), 49.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx())
+            )
+            drawRoundRect(
+                color = edge.copy(alpha = alpha),
+                topLeft = androidx.compose.ui.geometry.Offset(centerX - 8.dp.toPx(), 44.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(16.dp.toPx(), 49.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
+                style = Stroke(1.dp.toPx())
+            )
+            val ventX = centerX + (if (mirrored) -14 else 8).dp.toPx()
+            drawRoundRect(
+                color = detail.copy(alpha = .9f * alpha),
+                topLeft = androidx.compose.ui.geometry.Offset(ventX, 28.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(7.dp.toPx(), 15.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
+            )
+            drawCircle(
+                color = detail.copy(alpha = .58f * alpha),
+                radius = 2.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(centerX, 88.dp.toPx())
+            )
+        }
+        drawEarbud(size.width * .34f, false)
+        drawEarbud(size.width * .66f, true)
+    }
+}
+
+@Composable
+private fun CaseIllustration(connected: Boolean) {
+    val body = Color(0xFFF8FAFC)
+    val edge = Color(0xFFCAD3DE)
+    val alpha = if (connected) 1f else .52f
+    Canvas(
+        Modifier.size(width = 142.dp, height = 108.dp)
+            .semantics { contentDescription = "Representación del estuche de carga" }
+    ) {
+        drawRoundRect(
+            color = Color.Black.copy(alpha = .07f * alpha),
+            topLeft = androidx.compose.ui.geometry.Offset(8.dp.toPx(), 24.dp.toPx()),
+            size = androidx.compose.ui.geometry.Size(size.width - 16.dp.toPx(), 72.dp.toPx()),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(27.dp.toPx())
+        )
+        drawRoundRect(
+            color = body.copy(alpha = alpha),
+            topLeft = androidx.compose.ui.geometry.Offset(6.dp.toPx(), 20.dp.toPx()),
+            size = androidx.compose.ui.geometry.Size(size.width - 12.dp.toPx(), 72.dp.toPx()),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(27.dp.toPx())
+        )
+        drawRoundRect(
+            color = edge.copy(alpha = alpha),
+            topLeft = androidx.compose.ui.geometry.Offset(6.dp.toPx(), 20.dp.toPx()),
+            size = androidx.compose.ui.geometry.Size(size.width - 12.dp.toPx(), 72.dp.toPx()),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(27.dp.toPx()),
+            style = Stroke(1.dp.toPx())
+        )
+        drawLine(
+            color = edge.copy(alpha = .8f * alpha),
+            start = androidx.compose.ui.geometry.Offset(9.dp.toPx(), 48.dp.toPx()),
+            end = androidx.compose.ui.geometry.Offset(size.width - 9.dp.toPx(), 48.dp.toPx()),
+            strokeWidth = 1.dp.toPx()
+        )
+        drawCircle(
+            color = if (connected) Color(0xFF24B47E) else edge.copy(alpha = alpha),
+            radius = 2.dp.toPx(),
+            center = androidx.compose.ui.geometry.Offset(size.width / 2f, 63.dp.toPx())
+        )
+    }
+}
+
+private fun batteryText(battery: ComponentBattery?): String =
+    battery?.takeIf { it.isFresh() }?.percent?.let { "$it%" } ?: "—"
+
+private fun earbudsBatteryFresh(device: AirPodsDevice?): Boolean {
+    if (device == null) return false
+    return device.battery.left.isFresh() ||
+        device.battery.right.isFresh() ||
+        device.battery.combined.isFresh()
+}
+
+private fun earbudsBatteryText(device: AirPodsDevice?): String {
+    if (device == null) return "—"
+    val left = device.battery.left.takeIf { it.isFresh() }?.percent
+    val right = device.battery.right.takeIf { it.isFresh() }?.percent
+    if (left != null || right != null) {
+        return listOfNotNull(
+            left?.let { "L $it%" },
+            right?.let { "R $it%" }
+        ).joinToString(" · ")
+    }
+    return batteryText(device.battery.combined)
+}
+
+@Composable
+private fun HomeEssentials(state: BluetoothUiState) {
+    val connected = state.connectedDevice
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = .5f),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = .14f)
+        )
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            androidx.compose.material3.Icon(
+                if (connected != null) Icons.Outlined.Bluetooth else Icons.Outlined.Shield,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (connected != null) "Conexión activa" else "Detección privada",
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    if (connected != null) {
+                        "Bluetooth de Android · datos reales disponibles"
+                    } else {
+                        "Local, automática y sin cuenta de Apple"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
