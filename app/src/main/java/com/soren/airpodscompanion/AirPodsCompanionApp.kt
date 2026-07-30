@@ -53,6 +53,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Bluetooth
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.Settings
@@ -2110,6 +2111,8 @@ private fun SettingsScreen(
             companionMessage,
             onCompanionAssociation
         )
+        SectionHeader("Servicios de Apple", "Acceso seguro")
+        ICloudFindCard()
         SectionHeader("Privacidad", "Tus datos")
         PrivacySection(onExportAllData, onDeleteAllData)
         SectionHeader("Perfil", "Preferencia local")
@@ -2124,6 +2127,48 @@ private fun SettingsScreen(
         SectionHeader("Compatibilidad", "Limitaciones de Android")
         CompatibilityGroup()
         Spacer(Modifier.height(96.dp))
+    }
+}
+
+@Composable
+private fun ICloudFindCard() {
+    val context = LocalContext.current
+    var launchError by remember { mutableStateOf(false) }
+
+    AcrylicCard {
+        SettingLikeRow(
+            icon = Icons.Outlined.LocationOn,
+            title = "Buscar en iCloud",
+            detail = "Localiza tus AirPods mediante el servicio oficial de Apple",
+            status = "Abrir",
+            onClick = {
+                launchError = !ICloudFindLauncher.open(context)
+            }
+        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+        Row(
+            Modifier.padding(top = 13.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            androidx.compose.material3.Icon(
+                Icons.Outlined.Shield,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(17.dp)
+            )
+            Spacer(Modifier.width(9.dp))
+            Text(
+                if (launchError) {
+                    "No hay un navegador compatible con pestañas seguras. Instala o actualiza tu navegador e inténtalo nuevamente."
+                } else {
+                    "Apple administra el inicio de sesión dentro de una pestaña segura. " +
+                        "AirPods Companion no puede leer contraseñas, cookies, códigos ni ubicaciones."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (launchError) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

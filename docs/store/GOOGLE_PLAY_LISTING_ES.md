@@ -25,8 +25,9 @@ Funciones principales:
 - Widget y supervisión opcional en segundo plano.
 - Matriz de compatibilidad por modelo.
 - Exportación y eliminación completa de datos locales.
+- Acceso opcional a Buscar mediante el sitio oficial de iCloud en una pestaña segura.
 
-La aplicación no requiere cuenta de Apple. Las funciones propietarias que Android no exponga se muestran como limitadas o no disponibles, sin presentar datos simulados.
+La aplicación no requiere cuenta de Apple. Las funciones propietarias que Android no exponga se muestran como limitadas o no disponibles, sin presentar datos simulados. Al abrir Buscar, la sesión y las credenciales permanecen bajo control de Apple y del navegador; AirPods Companion no recibe información de la cuenta ni ubicaciones.
 
 Privacidad por diseño:
 

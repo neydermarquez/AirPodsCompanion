@@ -76,19 +76,22 @@ Los estados detectables solo se elevan cuando el laboratorio acumula comparacion
 | Nombre y vínculo | Acceso directo a Ajustes Bluetooth, propietario del dato | Implementado |
 | Accesibilidad | Semántica, áreas táctiles, texto ampliado y anuncios | Implementado |
 | Privacidad | Procesamiento local, exportación y borrado | Implementado |
+| Acceso a Buscar | Pestaña segura hacia `iCloud.com/find`, sin lectura de credenciales, cookies ni resultados | Implementado como acceso externo |
 
 ## Servicios Apple sin API Android
 
 Se muestran explícitamente como no disponibles:
 
 - Siri.
-- iCloud.
+- Datos y APIs internas de iCloud.
 - Cambio automático del ecosistema Apple.
-- Red Buscar.
+- Lectura o control directo de la red Buscar.
 - Actualización de firmware.
 - Audio espacial personalizado.
 - Salud auditiva, prueba de audición, audífono y protección avanzada.
 - Apple Intelligence y traducción propietaria.
+
+La aplicación puede abrir el sitio oficial de Buscar dentro de una pestaña segura administrada por el navegador. Este acceso no cambia el estado de las APIs: AirPods Companion no controla ni recibe datos de Buscar.
 
 ## Validación pendiente de hardware
 

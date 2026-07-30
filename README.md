@@ -50,6 +50,7 @@ La versión actual utiliza una interfaz clara única, con superficies suaves, na
 - Perfiles para música, llamadas, juegos y oficina.
 - Preferencias independientes de volumen, avisos y diagnósticos por perfil.
 - Exportación y eliminación de los datos locales.
+- Acceso seguro a Buscar en iCloud mediante una pestaña administrada por el navegador.
 
 ## Más de lo que muestra la pantalla principal
 
@@ -91,7 +92,7 @@ Cada capacidad se presenta con un estado explícito:
 - **No disponible:** Android no ofrece una API pública compatible.
 - **Pendiente de evidencia:** requiere validación reproducible con hardware real.
 
-Funciones propietarias como Buscar, iCloud, Siri, actualización de firmware y personalizaciones exclusivas del ecosistema Apple no se presentan como disponibles en Android.
+Funciones propietarias como Buscar, iCloud, Siri, actualización de firmware y personalizaciones exclusivas del ecosistema Apple no se presentan como controlables desde Android. Para Buscar, la aplicación ofrece un acceso directo a `iCloud.com/find` dentro de una pestaña segura administrada por el navegador; Apple conserva la sesión y AirPods Companion no recibe credenciales, cookies ni ubicaciones.
 
 El código fuente actual compila y carga por defecto un puente nativo experimental para ampliar el diagnóstico Bluetooth cuando el dispositivo lo permita. El puente intenta primero la ruta JNI y conserva una ruta de respaldo por reflexión; cualquier fallo se trata de forma segura y no convierte una API no disponible en una capacidad garantizada.
 
@@ -128,6 +129,7 @@ Get-FileHash .\AirPods-Companion-v1.0.1.apk -Algorithm SHA256
 - Sin recopilación ni almacenamiento de ubicación.
 - Sin transmisión automática de diagnósticos.
 - Historial y evidencia técnica eliminables desde la aplicación.
+- El acceso opcional a Buscar abre el sitio oficial de Apple; su sesión permanece aislada en el navegador.
 
 En Android 11 o versiones anteriores, el sistema puede asociar el escaneo Bluetooth con el permiso de ubicación debido a su modelo histórico de permisos. AirPods Companion no utiliza ese permiso para obtener ni guardar la ubicación del usuario. En Android 12 o posterior se emplean los permisos de dispositivos cercanos.
 
@@ -171,6 +173,7 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 - Room
 - ViewModel y restauración de estado
 - Companion Device Manager
+- Android Custom Tabs para el acceso aislado a iCloud Buscar
 - JNI, Android NDK y CMake para el puente Bluetooth experimental
 - Servicios y notificaciones de Android
 - Widgets de aplicación

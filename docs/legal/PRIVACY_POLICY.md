@@ -24,7 +24,13 @@ La aplicación puede procesar localmente:
 - Informes locales de fallos, únicamente con consentimiento.
 - Contadores locales de uso, únicamente con consentimiento.
 
-La aplicación no solicita una cuenta de Apple, no accede a iCloud y no recopila ubicación. El permiso de dispositivos cercanos se utiliza para Bluetooth.
+La aplicación no solicita ni recibe credenciales de una cuenta de Apple, no consulta datos de iCloud y no recopila ubicación. El permiso de dispositivos cercanos se utiliza para Bluetooth.
+
+## Acceso opcional a Buscar en iCloud
+
+Desde Ajustes, el usuario puede abrir voluntariamente `https://www.icloud.com/find/` en una pestaña segura administrada por el navegador instalado. El dominio, el formulario de acceso, las cookies, las contraseñas, los códigos de verificación y los resultados pertenecen a Apple y permanecen aislados del proceso de AirPods Companion.
+
+La aplicación únicamente solicita al navegador que abra la dirección oficial. No inyecta código en la página, no inspecciona su contenido, no recibe el estado de la cuenta y no importa ubicaciones ni dispositivos desde iCloud. Al cerrar la pestaña, el usuario regresa a la aplicación.
 
 ## Informes de fallos y métricas
 
@@ -32,7 +38,7 @@ Ambas opciones están desactivadas por defecto. Los informes y contadores perman
 
 ## Compartición
 
-La aplicación no vende ni comparte datos personales con terceros. No contiene publicidad ni SDKs externos de analítica en la versión descrita por esta política.
+La aplicación no vende ni comparte datos personales con terceros. No contiene publicidad ni SDKs externos de analítica en la versión descrita por esta política. Si el usuario abre Buscar, interactúa directamente con el servicio externo de Apple y se aplican las condiciones y políticas de Apple.
 
 ## Conservación y eliminación
 
