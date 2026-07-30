@@ -93,7 +93,15 @@ Cada capacidad se presenta con un estado explícito:
 
 Funciones propietarias como Buscar, iCloud, Siri, actualización de firmware y personalizaciones exclusivas del ecosistema Apple no se presentan como disponibles en Android.
 
-La compilación pública utiliza APIs de Android como base. El proyecto contiene un puente nativo experimental para investigación controlada, pero permanece desactivado por defecto y no forma parte del comportamiento normal de la versión publicada.
+El código fuente actual compila y carga por defecto un puente nativo experimental para ampliar el diagnóstico Bluetooth cuando el dispositivo lo permita. El puente intenta primero la ruta JNI y conserva una ruta de respaldo por reflexión; cualquier fallo se trata de forma segura y no convierte una API no disponible en una capacidad garantizada.
+
+Puede desactivarse para una compilación concreta con:
+
+```powershell
+.\gradlew.bat -PenableHiddenApiNativeBridge=false assembleDebug
+```
+
+> **Nota sobre `v1.0.0`:** los APK y AAB adjuntos a esa Release se generaron antes de activar el puente por defecto. El cambio está presente en el código de `main` desde el commit `4f8128d` y requiere generar una nueva compilación para llegar a un binario descargable.
 
 ## Descargar e instalar
 
@@ -131,11 +139,18 @@ Requisitos:
 
 - Android Studio con JDK 11 o posterior.
 - Android SDK 36.
+- Android NDK y CMake 3.22.1 para la configuración predeterminada con puente nativo.
 
 En Windows:
 
 ```powershell
 .\gradlew.bat assembleDebug
+```
+
+Para compilar sin código nativo:
+
+```powershell
+.\gradlew.bat -PenableHiddenApiNativeBridge=false assembleDebug
 ```
 
 Para ejecutar pruebas y análisis:
@@ -156,6 +171,7 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 - Room
 - ViewModel y restauración de estado
 - Companion Device Manager
+- JNI, Android NDK y CMake para el puente Bluetooth experimental
 - Servicios y notificaciones de Android
 - Widgets de aplicación
 - R8 y reducción de recursos en release
