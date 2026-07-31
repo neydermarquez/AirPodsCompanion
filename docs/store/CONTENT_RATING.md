@@ -1,6 +1,6 @@
 # Clasificación de contenido
 
-Referencia revisada: `v1.0.2`.
+Referencia revisada: `v1.0.3`.
 
 Respuestas previstas para el cuestionario, sujetas al formulario vigente de Google Play:
 

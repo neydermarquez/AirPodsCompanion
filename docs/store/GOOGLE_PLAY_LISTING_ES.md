@@ -1,6 +1,6 @@
 # Ficha de Google Play — Español
 
-Referencia revisada: `v1.0.2`.
+Referencia revisada: `v1.0.3`.
 
 ## Nombre
 

@@ -1,6 +1,6 @@
 # Declaración de seguridad de datos
 
-Esta guía refleja `v1.0.2`. Debe volver a comprobarse en cada release.
+Esta guía refleja `v1.0.3`. Debe volver a comprobarse en cada release.
 
 ## Recopilación y compartición
 
@@ -27,6 +27,7 @@ El puente nativo incluido desde `v1.0.1` realiza intentos locales de diagnóstic
 - Diagnóstico: informes opcionales de fallos locales.
 - Información de dispositivo: modelo del teléfono y versión Android dentro de informes locales autorizados.
 - Dispositivos cercanos: nombre y estado Bluetooth usados para prestar la función principal.
+- Nombre local del accesorio: alias opcional guardado únicamente en el dispositivo.
 
 ## Cambios que obligan a revisar el formulario
 

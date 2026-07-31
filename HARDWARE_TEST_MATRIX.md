@@ -4,8 +4,8 @@ No se marca una capacidad como compatible hasta observarla de forma reproducible
 
 ## Versión de referencia
 
-- Aplicación: `v1.0.2`.
-- Commit usado para compilar los binarios: `6c9dc70`.
+- Aplicación: `v1.0.3`.
+- Fuente de referencia: tag `v1.0.3`; verificar el SHA-256 del APK antes de cada sesión.
 - Paquete: `com.soren.airpodscompanion`.
 - Puente nativo: habilitado por defecto.
 - NDK: `28.2.13676358`.
@@ -15,7 +15,7 @@ Antes de cada sesión, registrar también el SHA-256 del APK utilizado. La compi
 
 ## Estado de la matriz
 
-La compilación, firma, instalación y apertura en emulador están verificadas. Las filas de hardware continúan pendientes hasta ejecutar pruebas con un teléfono Android físico y AirPods reales. La presencia del puente nativo no confirma por sí sola ninguna capacidad propietaria.
+La compilación, firma e instalación se verifican antes de publicar cada binario. Las filas de hardware continúan pendientes hasta completar las pruebas reproducibles con teléfonos Android físicos y AirPods reales. La presencia del puente nativo no confirma por sí sola ninguna capacidad propietaria.
 
 ## Modelos
 

@@ -4,7 +4,7 @@ El identificador definitivo es `com.soren.airpodscompanion`. Android no permite 
 
 ## Estado actual
 
-La versión pública `v1.0.2` utiliza `com.soren.airpodscompanion` y `versionCode` 3. Este identificador ya debe considerarse estable. Las siguientes versiones deben conservarlo y utilizar la misma clave de firma para instalarse como actualización.
+La versión pública `v1.0.3` utiliza `com.soren.airpodscompanion` y `versionCode` 4. Este identificador ya debe considerarse estable. Las siguientes versiones deben conservarlo y utilizar la misma clave de firma para instalarse como actualización.
 
 ## Si la versión provisional nunca se distribuyó
 

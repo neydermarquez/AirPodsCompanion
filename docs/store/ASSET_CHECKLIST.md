@@ -1,6 +1,6 @@
 # Recursos de publicación
 
-Referencia revisada: `v1.0.2`.
+Referencia revisada: `v1.0.3`.
 
 ## Disponibles en el proyecto
 

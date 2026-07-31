@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/neydermarquez/AirPodsCompanion/releases/download/v1.0.2/AirPods-Companion-v1.0.2.apk"><strong>Descargar APK v1.0.2</strong></a>
+  <a href="https://github.com/neydermarquez/AirPodsCompanion/releases/download/v1.0.3/AirPods-Companion-v1.0.3.apk"><strong>Descargar APK v1.0.3</strong></a>
   ·
   <a href="https://github.com/neydermarquez/AirPodsCompanion/releases/latest">Ver publicación</a>
 </p>
@@ -30,19 +30,19 @@ La interfaz diferencia los datos actuales, las lecturas antiguas y las funciones
 
 La versión actual utiliza una interfaz clara única, con representación visual de los auriculares y el estuche, navegación inferior persistente y estados específicos para permisos, Bluetooth apagado, búsqueda, conexión, reconexión, pérdida de conexión y compatibilidad limitada.
 
-## Novedades de v1.0.2
+## Novedades de v1.0.3
 
-- Inicio renovado con representación visual de los AirPods y el estuche.
-- Flujo simplificado de detección, vinculación y reconexión.
-- Actualización inmediata mediante eventos Bluetooth y comprobación periódica de respaldo.
-- Lecturas de batería separadas únicamente cuando el dispositivo las publica realmente.
-- Actividad y laboratorio local para recopilar evidencia desde el teléfono.
-- Acceso a Buscar en iCloud mediante una pestaña segura administrada por Apple.
-- Capturas y documentación organizadas por versión.
+- Reconciliación automática más rápida de conexiones A2DP y HFP, sin depender del botón Reconectar.
+- Presentación circular de batería y separación izquierda/derecha solo cuando las lecturas reales difieren.
+- Lectura del códec compatible con firmas modernas y antiguas de Android mediante degradación segura.
+- Administrador interno del dispositivo con información Bluetooth y nombre local personalizable.
+- Notificaciones de conexión y supervisión sincronizadas con el estado actual para evitar avisos contradictorios.
+- Laboratorio con cierre fiable de captura y resultado explícito cuando Android no publica una señal observable.
+- Integración multimedia aclarada: la reproducción y la pantalla bloqueada siguen bajo control del reproductor activo.
 
 ## Capturas
 
-### v1.0.2 — Actual
+### v1.0.2 — Referencia visual
 
 <p align="center">
   <img src="docs/screenshots/v1.0.2/inicio.png" width="23%" alt="Inicio de AirPods Companion v1.0.2">
@@ -148,7 +148,7 @@ Desde `v1.0.1`, los binarios publicados incluyen el puente nativo activado por d
 ## Descargar e instalar
 
 1. Abre la [última versión publicada](https://github.com/neydermarquez/AirPodsCompanion/releases/latest).
-2. Descarga `AirPods-Companion-v1.0.2.apk`.
+2. Descarga `AirPods-Companion-v1.0.3.apk`.
 3. Abre el archivo en tu dispositivo Android.
 4. Si Android lo solicita, autoriza temporalmente la instalación desde el navegador o gestor de archivos.
 
@@ -159,7 +159,7 @@ Requiere Android 7.0 (API 24) o posterior. El archivo `.aab` de la publicación 
 La publicación incluye `SHA256SUMS.txt`. En Windows puedes comprobar el APK con:
 
 ```powershell
-Get-FileHash .\AirPods-Companion-v1.0.2.apk -Algorithm SHA256
+Get-FileHash .\AirPods-Companion-v1.0.3.apk -Algorithm SHA256
 ```
 
 ## Privacidad
@@ -222,7 +222,7 @@ La firma de producción no forma parte del repositorio. Cada distribuidor debe c
 
 ## Estado del proyecto
 
-La versión pública actual es `v1.0.2`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
+La versión pública actual es `v1.0.3`. La aplicación está compilada, firmada y disponible para instalación. La arquitectura funcional y la presentación de estados están implementadas; la validación detallada de batería, carga, modos propietarios y sensores depende de disponer de cada generación de AirPods y teléfonos Android físicos.
 
 Consulta la [trazabilidad funcional](docs/REQUIREMENTS_TRACEABILITY.md) y la [matriz de pruebas de hardware](HARDWARE_TEST_MATRIX.md) para conocer el estado exacto de cada área.
 
