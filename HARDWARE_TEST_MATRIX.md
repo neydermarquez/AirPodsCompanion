@@ -15,7 +15,18 @@ Antes de cada sesión, registrar también el SHA-256 del APK utilizado. La compi
 
 ## Estado de la matriz
 
-La compilación, firma e instalación se verifican antes de publicar cada binario. Las filas de hardware continúan pendientes hasta completar las pruebas reproducibles con teléfonos Android físicos y AirPods reales. La presencia del puente nativo no confirma por sí sola ninguna capacidad propietaria.
+La compilación, firma e instalación se verifican antes de publicar cada binario. `v1.0.3` fue instalada como actualización y abrió sin excepción fatal ni ANR en un Motorola moto g72 con Android 13 (API 33). Las filas funcionales de AirPods continúan pendientes hasta completar pruebas reproducibles con hardware real. La presencia del puente nativo no confirma por sí sola ninguna capacidad propietaria.
+
+### Validación base de v1.0.3
+
+| Área | Resultado |
+|---|---|
+| Instalación sobre versión anterior | Correcta |
+| Identidad del paquete | `com.soren.airpodscompanion` |
+| Versión reconocida por Android | `versionCode` 4 / `versionName` 1.0.3 |
+| Arranque en teléfono físico | Correcto |
+| Excepción fatal o ANR inmediato | No observado |
+| Conexión, batería y modos de AirPods | Pendiente de sesión reproducible |
 
 ## Modelos
 

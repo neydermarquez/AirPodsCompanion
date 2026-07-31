@@ -1,5 +1,7 @@
 # Captura HCI opcional para desarrollo
 
+**Referencia revisada:** `v1.0.3`.
+
 > Esta herramienta no forma parte del uso normal de AirPods Companion. Los usuarios y las pruebas funcionales ordinarias se realizan desde **Actividad > Laboratorio** usando únicamente el teléfono.
 
 Esta guía obtiene evidencia reproducible sin root, sin reiniciar procesos del sistema y sin escribir paquetes Bluetooth desconocidos.

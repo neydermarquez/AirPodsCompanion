@@ -1,5 +1,7 @@
 # Apple AirPods — Historia, modelos y comparación completa
 
+> **Documento de contexto revisado para AirPods Companion v1.0.3.** Esta comparación histórica no sustituye la matriz de compatibilidad ni la evidencia obtenida con hardware real.
+
 > **Uso interno:** documento de investigación de modelos, no matriz de compatibilidad ni fuente de promesas comerciales. Los modelos futuros o no validados y sus características deben confirmarse con fuentes oficiales antes de incorporarlos a la aplicación o a una ficha de publicación. El estado real de AirPods Companion se mantiene en `docs/REQUIREMENTS_TRACEABILITY.md` y `HARDWARE_TEST_MATRIX.md`.
 
 ## Introducción

@@ -8,7 +8,7 @@ AirPods Companion
 
 ## Descripción corta
 
-Consulta conexión, batería y compatibilidad de tus AirPods desde Android.
+Detecta tus AirPods y consulta conexión, batería disponible y compatibilidad en Android.
 
 ## Descripción completa
 
@@ -19,7 +19,10 @@ Funciones principales:
 - Reconocimiento automático de dispositivos vinculados y conectados.
 - Estado real de Bluetooth, conexión, vinculación y reconexión.
 - Batería publicada por Android, con indicación de vigencia.
-- Controles multimedia compatibles.
+- Presentación separada de auriculares y estuche cuando el teléfono publique esas lecturas.
+- Lectura del códec Bluetooth cuando Android permita consultarlo.
+- Administración interna del dispositivo y nombre local personalizable.
+- Integración con el reproductor activo de Android, sin duplicar sus controles multimedia.
 - Historial local de actividad, diagnósticos y laboratorio de compatibilidad.
 - Notificaciones configurables de conexión, desconexión y batería baja.
 - Widget y supervisión opcional en segundo plano.

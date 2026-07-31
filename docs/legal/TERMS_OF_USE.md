@@ -2,6 +2,8 @@
 
 **Última actualización:** 30 de julio de 2026
 
+**Versión de referencia:** `v1.0.3`
+
 ## 1. Alcance
 
 AirPods Companion ofrece funciones complementarias basadas principalmente en APIs públicas de Android y en información Bluetooth que el dispositivo conectado publique. Desde la versión 1.0.1 incorpora un puente nativo experimental para diagnósticos permitidos por el sistema, sin garantizar que Android o el fabricante expongan esos datos.

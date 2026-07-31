@@ -2,6 +2,8 @@
 
 **Última actualización:** 30 de julio de 2026
 
+**Versión de referencia:** `v1.0.3`
+
 AirPods Companion es una aplicación complementaria independiente para consultar y gestionar dispositivos Bluetooth compatibles. Utiliza primero las capacidades públicas de Android y puede realizar diagnósticos locales mediante un puente nativo experimental cuando el sistema lo permita.
 
 ## Responsable
@@ -17,6 +19,7 @@ Antes de publicar, el desarrollador debe completar:
 La aplicación puede procesar localmente:
 
 - Nombre y estado de dispositivos Bluetooth compatibles.
+- Alias local opcional elegido por el usuario para identificar un accesorio dentro de la aplicación.
 - Estado de conexión y batería que Android publique.
 - Preferencias, notificaciones y perfiles configurados por el usuario.
 - Historial local de conexiones y diagnósticos.
@@ -42,7 +45,7 @@ La aplicación no vende ni comparte datos personales con terceros. No contiene p
 
 ## Conservación y eliminación
 
-El historial y la evidencia técnica usan límites configurables. Los informes de fallos se limitan a cinco archivos locales. Desde Ajustes > Privacidad se pueden exportar o eliminar todos los datos locales.
+El historial y la evidencia técnica usan límites configurables. Los informes de fallos se limitan a cinco archivos locales. Los alias de accesorios permanecen en el almacenamiento privado de la aplicación. Desde Ajustes > Privacidad se pueden exportar o eliminar todos los datos locales, incluidos esos alias.
 
 ## Copias de seguridad
 
