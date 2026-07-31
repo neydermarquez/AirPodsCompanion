@@ -36,6 +36,16 @@ class MediaControls(context: Context) {
         return true
     }
 
+    fun limitMusicVolumePercent(percent: Int): Boolean {
+        val manager = audioManager ?: return false
+        val maximum = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        if (maximum <= 0) return false
+        val target = (maximum * percent.coerceIn(0, 100) / 100f).toInt().coerceIn(0, maximum)
+        if (manager.getStreamVolume(AudioManager.STREAM_MUSIC) <= target) return false
+        manager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        return true
+    }
+
     private fun send(keyCode: Int) {
         val manager = audioManager ?: return
         manager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))

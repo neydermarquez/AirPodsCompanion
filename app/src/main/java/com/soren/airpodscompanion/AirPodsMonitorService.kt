@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,10 @@ class AirPodsMonitorService : Service() {
     private var observation: Job? = null
     private var previousConnectedAddress: String? = null
     private var previousBattery: Int? = null
+    private var pendingConnectionTransition: Job? = null
+    private var pendingConnectedAddress: String? = null
+    private var hasPendingConnectionTransition = false
+    private var lastMonitoringSignature: String? = null
     private lateinit var monitorStatus: MonitorStatusStore
     private lateinit var bluetoothAdapter: BluetoothAdapter
     private var a2dpProfile: BluetoothA2dp? = null
@@ -78,6 +83,7 @@ class AirPodsMonitorService : Service() {
         }
         AirPodsNotifications.createChannels(this)
         startForeground(AirPodsNotifications.SERVICE_ID, AirPodsNotifications.monitoring(this, device = null))
+        lastMonitoringSignature = monitoringSignature(device = null)
         repository.acquire(RepositoryOwner.MONITOR_SERVICE)
         monitorStatus.record(MonitorState.RUNNING, "Observando el repositorio Bluetooth")
         repository.controller.reloadHistory()
@@ -107,6 +113,7 @@ class AirPodsMonitorService : Service() {
             runCatching { bluetoothAdapter.closeProfileProxy(BluetoothProfile.A2DP, it) }
         }
         observation?.cancel()
+        pendingConnectionTransition?.cancel()
         scope.cancel()
         if (::repository.isInitialized) repository.release(RepositoryOwner.MONITOR_SERVICE)
         if (::monitorStatus.isInitialized) {
@@ -125,22 +132,7 @@ class AirPodsMonitorService : Service() {
         val connected = state.connectedDevice
         snapshots.save(connected)
         val currentAddress = connected?.address
-        if (currentAddress != previousConnectedAddress) {
-            when {
-                connected != null -> AirPodsNotifications.event(
-                    this, AirPodsNotificationType.CONNECTED,
-                    "${connected.name} conectado", "El audio Bluetooth está disponible."
-                )
-                previousConnectedAddress != null -> AirPodsNotifications.event(
-                    this, AirPodsNotificationType.DISCONNECTED,
-                    "AirPods desconectados", "Se perdió la conexión Bluetooth."
-                )
-            }
-            previousConnectedAddress = currentAddress
-            currentAddress?.let { address ->
-                inspectCurrentCodec(address)
-            }
-        }
+        scheduleStableConnectionTransition(currentAddress)
 
         if (connected != null) {
             inspectCurrentCodec(currentAddress)
@@ -150,17 +142,103 @@ class AirPodsMonitorService : Service() {
         val battery = batteryReading?.second
         val threshold = NotificationPreferences(this).load().lowBatteryThreshold
         if (battery != null && battery <= threshold && (previousBattery == null || previousBattery!! > threshold)) {
+            val profileStore = ListeningProfileStore(this)
+            val profile = profileStore.load()
+            MediaControls(this).limitMusicVolumePercent(profileStore.settings(profile).volumePercent)
             AirPodsNotifications.event(
                 this, AirPodsNotificationType.LOW_BATTERY,
                 "Batería baja", "${batteryReading.first.replaceFirstChar(Char::uppercase)}: $battery%."
             )
         }
-        previousBattery = battery
+        if (connected != null && battery != null) previousBattery = battery
 
+        updateMonitoringNotification(connected)
+    }
+
+    private fun scheduleStableConnectionTransition(currentAddress: String?) {
+        if (currentAddress == previousConnectedAddress) {
+            clearPendingConnectionTransition()
+            return
+        }
+        if (hasPendingConnectionTransition && pendingConnectedAddress == currentAddress) return
+
+        pendingConnectionTransition?.cancel()
+        hasPendingConnectionTransition = true
+        pendingConnectedAddress = currentAddress
+        pendingConnectionTransition = scope.launch {
+            delay(
+                if (currentAddress == null) DISCONNECTION_STABILITY_MS
+                else CONNECTION_STABILITY_MS
+            )
+            val latestDevice = repository.controller.state.value.connectedDevice
+            val latestAddress = latestDevice?.address
+            if (latestAddress != currentAddress || previousConnectedAddress == latestAddress) {
+                clearPendingConnectionTransition(cancelJob = false)
+                return@launch
+            }
+            if (latestAddress == null && isConnectedThroughA2dp(previousConnectedAddress)) {
+                clearPendingConnectionTransition(cancelJob = false)
+                return@launch
+            }
+
+            val wasConnected = previousConnectedAddress != null
+            previousConnectedAddress = latestAddress
+            if (latestDevice == null) previousBattery = null
+            clearPendingConnectionTransition(cancelJob = false)
+
+            when {
+                latestDevice != null -> {
+                    AirPodsNotifications.event(
+                        this@AirPodsMonitorService,
+                        AirPodsNotificationType.CONNECTED,
+                        "${latestDevice.name} conectado",
+                        "El audio Bluetooth está disponible."
+                    )
+                    inspectCurrentCodec(latestAddress)
+                }
+                wasConnected -> AirPodsNotifications.event(
+                    this@AirPodsMonitorService,
+                    AirPodsNotificationType.DISCONNECTED,
+                    "AirPods desconectados",
+                    "Se perdió la conexión Bluetooth."
+                )
+            }
+        }
+    }
+
+    private fun clearPendingConnectionTransition(cancelJob: Boolean = true) {
+        if (cancelJob) pendingConnectionTransition?.cancel()
+        pendingConnectionTransition = null
+        hasPendingConnectionTransition = false
+        pendingConnectedAddress = null
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun isConnectedThroughA2dp(address: String?): Boolean {
+        if (address == null || !hasBluetoothConnectPermission()) return false
+        return runCatching {
+            a2dpProfile?.connectedDevices?.any { it.address == address } == true
+        }.getOrDefault(false)
+    }
+
+    private fun updateMonitoringNotification(device: AirPodsDevice?) {
+        val signature = monitoringSignature(device)
+        if (signature == lastMonitoringSignature) return
+        lastMonitoringSignature = signature
         getSystemService(NotificationManager::class.java).notify(
             AirPodsNotifications.SERVICE_ID,
-            AirPodsNotifications.monitoring(this, connected)
+            AirPodsNotifications.monitoring(this, device)
         )
+    }
+
+    private fun monitoringSignature(device: AirPodsDevice?): String {
+        val battery = device?.battery?.let(BluetoothConnectionPolicy::lowestFreshBattery)
+        return listOf(
+            device?.address ?: "disconnected",
+            device?.name.orEmpty(),
+            battery?.first.orEmpty(),
+            battery?.second?.toString().orEmpty()
+        ).joinToString("|")
     }
 
     @SuppressLint("MissingPermission")
@@ -180,6 +258,11 @@ class AirPodsMonitorService : Service() {
         val a2dp = a2dpProfile ?: return
         val address = connectedAddress ?: return
         onAirPodsConnected(a2dp, address)
+    }
+
+    private companion object {
+        const val CONNECTION_STABILITY_MS = 2_000L
+        const val DISCONNECTION_STABILITY_MS = 12_000L
     }
 
     @SuppressLint("MissingPermission")
