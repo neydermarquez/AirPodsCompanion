@@ -67,7 +67,8 @@ data class BluetoothUiState(
     val devices: List<AirPodsDevice> = emptyList(),
     val error: String? = null,
     val history: List<ConnectionEvent> = emptyList(),
-    val protocolCapture: ProtocolCaptureState = ProtocolCaptureState()
+    val protocolCapture: ProtocolCaptureState = ProtocolCaptureState(),
+    val codecLabel: String? = null
 ) {
     val connectedDevice: AirPodsDevice? get() = devices.firstOrNull { it.connected }
 }
@@ -85,6 +86,7 @@ class BluetoothController(private val context: Context) {
     private val batteryStateStore = BatteryStateStore(context)
     private val snapshotStore = DeviceSnapshotStore(context)
     private val captureStore = ProtocolCaptureStore(context)
+    private val aliasStore = DeviceAliasStore(context)
     private val capabilityEngine = AirPodsCapabilityEngine(captureStore)
     private var history = _state.value.history
     private val nearby = linkedMapOf<String, BluetoothDevice>()
@@ -99,6 +101,13 @@ class BluetoothController(private val context: Context) {
             if (!registered) return
             pollConnectedBattery()
             handler.postDelayed(this, BATTERY_POLL_INTERVAL_MS)
+        }
+    }
+    private val connectionPoll = object : Runnable {
+        override fun run() {
+            if (!registered) return
+            refresh()
+            handler.postDelayed(this, CONNECTION_POLL_INTERVAL_MS)
         }
     }
 
@@ -127,12 +136,13 @@ class BluetoothController(private val context: Context) {
                 BluetoothAdapter.ACTION_STATE_CHANGED,
                 BluetoothAdapter.ACTION_DISCOVERY_STARTED,
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED,
-                BluetoothDevice.ACTION_UUID,
                 BluetoothDevice.ACTION_NAME_CHANGED,
-                BluetoothDevice.ACTION_ACL_CONNECTED,
-                BluetoothDevice.ACTION_ACL_DISCONNECTED -> refresh()
+                BluetoothDevice.ACTION_UUID -> refresh()
+                BluetoothDevice.ACTION_ACL_CONNECTED -> handleAclState(intent, connected = true)
+                BluetoothDevice.ACTION_ACL_DISCONNECTED -> handleAclState(intent, connected = false)
                 BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED,
                 BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> handleProfileConnection(intent)
+                ACTION_CODEC_CONFIG_CHANGED -> refresh()
                 BluetoothA2dp.ACTION_PLAYING_STATE_CHANGED,
                 BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED -> handleAudioState(intent)
                 ACTION_BATTERY_LEVEL_CHANGED -> readAndroidBatteryEvent(intent)
@@ -194,6 +204,7 @@ class BluetoothController(private val context: Context) {
                 addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
                 addAction(BluetoothA2dp.ACTION_PLAYING_STATE_CHANGED)
                 addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED)
+                addAction(ACTION_CODEC_CONFIG_CHANGED)
                 addAction(ACTION_BATTERY_LEVEL_CHANGED)
                 addAction(BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT)
                 addCategory(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY + ".76")
@@ -208,6 +219,8 @@ class BluetoothController(private val context: Context) {
         refresh()
         handler.removeCallbacks(batteryPoll)
         handler.post(batteryPoll)
+        handler.removeCallbacks(connectionPoll)
+        handler.post(connectionPoll)
     }
 
     fun stop() {
@@ -258,7 +271,10 @@ class BluetoothController(private val context: Context) {
                         status,
                         devices,
                         history = history,
-                        protocolCapture = captureStore.state()
+                        protocolCapture = _state.value.protocolCapture,
+                        codecLabel = devices.firstOrNull { it.connected }?.let {
+                            readCodecLabel(it.address)
+                        }
                     )
                     if (devices.any { it.connected }) {
                         pendingReconnectAddress = null
@@ -412,11 +428,14 @@ class BluetoothController(private val context: Context) {
         val snapshot = snapshotStore.load()
         val publishedName = runCatching { device.name }.getOrNull()
         val knownAddress = snapshot.address == address
-        val name = publishedName ?: snapshot.name.takeIf { knownAddress } ?: return
-        if (!BluetoothConnectionPolicy.isRecognizedAirPods(name, address, snapshot.address)) return
+        val sourceName = publishedName ?: snapshot.name.takeIf { knownAddress } ?: return
+        if (!BluetoothConnectionPolicy.isRecognizedAirPods(sourceName, address, snapshot.address)) return
+        val name = aliasStore.get(address)
+            ?: runCatching { if (Build.VERSION.SDK_INT >= 30) device.alias else null }.getOrNull()
+            ?: sourceName
         val previous = found[address]
         val identification = AirPodsSignalParser.identify(
-            name.takeIf { it.contains("airpods", ignoreCase = true) } ?: snapshot.name ?: name
+            sourceName.takeIf { it.contains("airpods", ignoreCase = true) } ?: snapshot.name ?: sourceName
         )
         found[address] = AirPodsDevice(
             name = name,
@@ -557,7 +576,8 @@ class BluetoothController(private val context: Context) {
         val scanner = bluetooth.bluetoothLeScanner
         if (scanner == null) {
             reportError("Este teléfono no ofrece escaneo Bluetooth LE.")
-            return captureStore.stop()
+            stopProtocolCapture()
+            return
         }
         runCatching {
             scanner.startScan(
@@ -622,10 +642,27 @@ class BluetoothController(private val context: Context) {
                 reconnectGeneration += 1
                 snapshotStore.clearReconnecting()
                 record(ConnectionEventType.CONNECTED, name, "Perfil de audio conectado")
+                if (device != null) addDevice(device, connected = true)
             }
             BluetoothProfile.STATE_DISCONNECTED -> record(ConnectionEventType.DISCONNECTED, name, "Perfil de audio desconectado")
         }
-        refresh()
+        handler.postDelayed(::refresh, PROFILE_STATE_SETTLE_MS)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun handleAclState(intent: Intent, connected: Boolean) {
+        val device = if (Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+        } ?: return refresh()
+        if (connected) {
+            addDevice(device, connected = true)
+            snapshotStore.save(_state.value.connectedDevice)
+            pollConnectedBattery()
+        }
+        handler.postDelayed(::refresh, PROFILE_STATE_SETTLE_MS)
     }
 
     @SuppressLint("MissingPermission")
@@ -650,6 +687,15 @@ class BluetoothController(private val context: Context) {
             }
             else -> return
         }
+        captureStore.append(
+            model = AirPodsSignalParser.identify(name).first,
+            source = when (intent.action) {
+                BluetoothA2dp.ACTION_PLAYING_STATE_CHANGED -> "Android A2DP playback state"
+                else -> "Android HFP audio state"
+            },
+            payload = "%02X".format(state and 0xFF)
+        )
+        publishCaptureState()
         record(ConnectionEventType.AUDIO, name, detail)
     }
 
@@ -662,13 +708,72 @@ class BluetoothController(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun getCurrentA2dpCodecConfig(): String? {
         val a2dp = proxies[BluetoothProfile.A2DP] as? BluetoothA2dp ?: return null
-        return hiddenCompat.getA2dpCodecConfig(a2dp)?.toString()
+        val device = _state.value.connectedDevice?.address
+            ?.let { runCatching { adapter?.getRemoteDevice(it) }.getOrNull() }
+            ?: return null
+        return hiddenCompat.getA2dpCodecConfig(a2dp, device)?.toString()
     }
 
     @SuppressLint("MissingPermission")
     fun getA2dpCodecStatus(): String? {
         val a2dp = proxies[BluetoothProfile.A2DP] as? BluetoothA2dp ?: return null
-        return hiddenCompat.getA2dpCodecStatus(a2dp)?.toString()
+        val device = _state.value.connectedDevice?.address
+            ?.let { runCatching { adapter?.getRemoteDevice(it) }.getOrNull() }
+            ?: return null
+        return hiddenCompat.getA2dpCodecStatus(a2dp, device)?.toString()
+    }
+
+    @SuppressLint("MissingPermission")
+    fun renameDevice(address: String, alias: String): Boolean {
+        val normalized = alias.trim().take(48)
+        if (normalized.isBlank()) return false
+        aliasStore.save(address, normalized)
+        val device = runCatching { adapter?.getRemoteDevice(address) }.getOrNull()
+        if (Build.VERSION.SDK_INT >= 31 && device != null && hasPermissions()) {
+            runCatching { device.setAlias(normalized) }
+        }
+        refresh()
+        return true
+    }
+
+    private fun readCodecLabel(address: String): String? {
+        val a2dp = proxies[BluetoothProfile.A2DP] as? BluetoothA2dp ?: return null
+        val device = runCatching { adapter?.getRemoteDevice(address) }.getOrNull() ?: return null
+        val status = hiddenCompat.getA2dpCodecStatus(a2dp, device)
+        val config = status?.let {
+            runCatching { it.javaClass.getMethod("getCodecConfig").invoke(it) }.getOrNull()
+        } ?: hiddenCompat.getA2dpCodecConfig(a2dp, device)
+        return codecName(config)
+    }
+
+    private fun codecName(config: Any?): String? {
+        if (config == null) return null
+        val extended = runCatching {
+            config.javaClass.getMethod("getExtendedCodecType").invoke(config)
+        }.getOrNull()
+        val extendedName = extended?.let {
+            runCatching { it.javaClass.getMethod("getCodecName").invoke(it)?.toString() }.getOrNull()
+        }
+        if (!extendedName.isNullOrBlank()) return extendedName
+        val type = runCatching {
+            (config.javaClass.getMethod("getCodecType").invoke(config) as? Number)?.toInt()
+        }.getOrNull()
+        return when (type) {
+            0 -> "SBC"
+            1 -> "AAC"
+            2 -> "aptX"
+            3 -> "aptX HD"
+            4 -> "LDAC"
+            5 -> "LC3"
+            6 -> "Opus"
+            else -> config.toString()
+                .lineSequence()
+                .firstOrNull { "codec" in it.lowercase() }
+                ?.substringAfter("=")
+                ?.substringBefore(",")
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -711,8 +816,11 @@ class BluetoothController(private val context: Context) {
         const val APPLE_COMPANY_ID = 0x004C
         const val CAPTURE_DURATION_MS = 15_000L
         const val PROFILE_RETRY_DELAY_MS = 1_200L
+        const val PROFILE_STATE_SETTLE_MS = 350L
         const val RECONNECT_TIMEOUT_MS = 12_000L
         const val BATTERY_POLL_INTERVAL_MS = 15_000L
+        const val CONNECTION_POLL_INTERVAL_MS = 2_000L
+        const val ACTION_CODEC_CONFIG_CHANGED = "android.bluetooth.a2dp.profile.action.CODEC_CONFIG_CHANGED"
         const val ACTION_BATTERY_LEVEL_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED"
         const val EXTRA_BATTERY_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL"
     }

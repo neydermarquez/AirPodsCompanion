@@ -25,13 +25,13 @@ La referencia documental actual es `v1.0.2` (`versionCode` 3, commit de compilac
 
 | Requisito | Implementación | Estado |
 |---|---|---|
-| Reproducir, pausar, anterior y siguiente | Eventos multimedia públicos | Implementado |
+| Reproducir, pausar, anterior y siguiente | Delegado a la sesión del reproductor activo para evitar controles duplicados | Gestionado por el reproductor |
 | Volumen | `AudioManager` | Implementado |
 | Salida multimedia | Diagnóstico de rutas de audio | Implementado |
 | Micrófono | Detección de entrada Bluetooth | Implementado |
 | Silenciar/activar | Acción disponible durante llamada y con micrófono Bluetooth | Implementado |
 | Pantalla bloqueada | Gestionada por MediaSession/reproductor de Android | Gestionado por Android |
-| Códec | API pública primero; consulta JNI/reflexión como alternativa experimental y degradación segura | Dependiente del sistema |
+| Códec | Lectura de `BluetoothCodecStatus` con firma por dispositivo y compatibilidad con firmas antiguas mediante JNI/reflexión | Dependiente del sistema |
 | Latencia | Requiere medición física de reproducción/captura | Pendiente de hardware |
 
 ## Sensores, gestos y modos
@@ -70,10 +70,10 @@ Los estados detectables solo se elevan cuando el laboratorio acumula comparacion
 |---|---|---|
 | Ventana de conexión | Estados conectado, reconectando y perdido | Implementado |
 | Widget | Automático, compacto y ampliado | Implementado |
-| Notificaciones | Conexión, desconexión, batería y reconexión; batería baja usa el componente real más bajo y vigente | Implementado |
+| Notificaciones | Conexión, desconexión, batería y reconexión; la notificación persistente consume el mismo estado actual del repositorio | Implementado |
 | Información por modelo | Modelo, confianza, batería, audio y 41 capacidades | Implementado |
 | Preferencias | Perfil, volumen y avisos aplicados al seleccionar; supervisión, retención y privacidad | Implementado |
-| Nombre y vínculo | Acceso directo a Ajustes Bluetooth, propietario del dato | Implementado |
+| Nombre y vínculo | Administración interna, alias local y aplicación del alias del sistema cuando Companion Device Manager lo autoriza | Implementado con degradación segura |
 | Accesibilidad | Semántica, áreas táctiles, texto ampliado y anuncios | Implementado |
 | Privacidad | Procesamiento local, exportación y borrado | Implementado |
 | Acceso a Buscar | Pestaña segura hacia `iCloud.com/find`, sin lectura de credenciales, cookies ni resultados | Implementado como acceso externo |

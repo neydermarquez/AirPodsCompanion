@@ -20,7 +20,11 @@ class HiddenBluetoothCompat(context: Context) {
         installHiddenApiExemptions()
     }
 
-    fun getA2dpCodecConfig(a2dp: BluetoothA2dp): Any? {
+    fun getA2dpCodecConfig(a2dp: BluetoothA2dp, device: BluetoothDevice): Any? {
+        val status = getA2dpCodecStatus(a2dp, device)
+        status?.let {
+            invokeAny(it, "getCodecConfig")?.let { config -> return config }
+        }
         nativeBridge.getCodecConfig(a2dp)?.let { return it }
         return invokeNoArg(a2dp, "getCodecConfig")
     }
@@ -31,7 +35,8 @@ class HiddenBluetoothCompat(context: Context) {
         return invokeBoolean(a2dp, "setCodecConfigPreference", codecConfig)
     }
 
-    fun getA2dpCodecStatus(a2dp: BluetoothA2dp): Any? {
+    fun getA2dpCodecStatus(a2dp: BluetoothA2dp, device: BluetoothDevice): Any? {
+        invokeAny(a2dp, "getCodecStatus", device)?.let { return it }
         nativeBridge.getCodecStatus(a2dp)?.let { return it }
         return invokeNoArg(a2dp, "getCodecStatus")
     }
@@ -112,6 +117,17 @@ class HiddenBluetoothCompat(context: Context) {
             findMethod(target::class.java, methodName).invoke(target)
         }.getOrNull()
     }
+
+    private fun invokeAny(target: Any, methodName: String, arg: Any? = null): Any? =
+        runCatching {
+            val method = if (arg == null) {
+                findMethod(target::class.java, methodName)
+            } else {
+                findMethod(target::class.java, methodName, arg::class.java)
+            }
+            method.isAccessible = true
+            if (arg == null) method.invoke(target) else method.invoke(target, arg)
+        }.getOrNull()
 
     private fun invokeString(target: Any, methodName: String, arg: String): String? {
         return runCatching {

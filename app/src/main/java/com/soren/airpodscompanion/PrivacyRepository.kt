@@ -14,6 +14,7 @@ class PrivacyRepository(private val context: Context) {
         val protocol = ProtocolCaptureStore(context).load()
         val crashes = CrashReportStore(context).reports()
         val metrics = LocalMetricStore(context).snapshot()
+        val aliases = DeviceAliasStore(context).aliases()
         return buildString {
             append("{\n  \"format\":\"airpods-companion-user-data-v1\",\n")
             append("  \"exportedAt\":${System.currentTimeMillis()},\n")
@@ -49,7 +50,12 @@ class PrivacyRepository(private val context: Context) {
                 if (index < crashes.lastIndex) append(",")
                 append("\n")
             }
-            append("  ]\n}")
+            append("  ],\n  \"deviceAliases\":[")
+            aliases.forEachIndexed { index, alias ->
+                append("\"${json(alias)}\"")
+                if (index < aliases.lastIndex) append(",")
+            }
+            append("]\n}")
         }
     }
 
@@ -81,7 +87,8 @@ class PrivacyRepository(private val context: Context) {
         val LEGACY_STORES = listOf(
             "background_preferences", "notification_preferences", "listening_profile",
             "history_retention", "widget_preferences", "protocol_capture",
-            "device_snapshot", "battery_states", "battery_evidence", "monitor_status"
+            "device_snapshot", "battery_states", "battery_evidence", "monitor_status",
+            "device_aliases"
         )
     }
 }

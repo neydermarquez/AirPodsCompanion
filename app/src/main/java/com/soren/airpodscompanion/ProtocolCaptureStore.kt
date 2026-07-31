@@ -46,7 +46,8 @@ data class ProtocolCaptureState(
     val scenariosWithEvidence: Int = 0,
     val reproducibleComparisons: Int = 0,
     val sessions: List<ProtocolSession> = emptyList(),
-    val sessionCounts: Map<CaptureScenario, Int> = emptyMap()
+    val sessionCounts: Map<CaptureScenario, Int> = emptyMap(),
+    val lastCaptureSampleCount: Int? = null
 )
 
 /**
@@ -74,19 +75,24 @@ class ProtocolCaptureStore(private val context: Context) {
             sessionCounts.count { it.value >= ProtocolAnalyzer.MIN_REPETITIONS },
             ProtocolAnalyzer.reproducibleComparisons(samples).size,
             completedSessions,
-            sessionCounts
+            sessionCounts,
+            preferences.int(NAMESPACE, KEY_LAST_SAMPLE_COUNT, -1).takeIf { it >= 0 }
         )
     }
 
     fun start(scenario: CaptureScenario) {
         preferences.putString(NAMESPACE, KEY_ACTIVE, scenario.name)
         preferences.putString(NAMESPACE, KEY_ACTIVE_SESSION, "${System.currentTimeMillis()}-${scenario.name}")
+        preferences.putInt(NAMESPACE, KEY_START_SAMPLE_COUNT, load().size)
     }
 
     fun stop() {
         val active = state().activeScenario
+        val startCount = preferences.int(NAMESPACE, KEY_START_SAMPLE_COUNT, load().size)
+        val captured = (load().size - startCount).coerceAtLeast(0)
         preferences.putString(NAMESPACE, KEY_ACTIVE, null)
         preferences.putString(NAMESPACE, KEY_ACTIVE_SESSION, null)
+        preferences.putInt(NAMESPACE, KEY_LAST_SAMPLE_COUNT, captured)
         if (active != null) preferences.putString(NAMESPACE, KEY_COMPLETED, active.name)
     }
 
@@ -230,6 +236,8 @@ class ProtocolCaptureStore(private val context: Context) {
         const val KEY_ACTIVE = "active"
         const val KEY_ACTIVE_SESSION = "active_session"
         const val KEY_COMPLETED = "completed"
+        const val KEY_START_SAMPLE_COUNT = "start_sample_count"
+        const val KEY_LAST_SAMPLE_COUNT = "last_sample_count"
         const val KEY_SAMPLES = "samples"
         const val KEY_ROOM_MIGRATED = "room_migrated"
         const val NAMESPACE = "protocol_capture"

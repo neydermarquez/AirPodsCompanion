@@ -39,6 +39,22 @@ object AirPodsNotifications {
             )
             .setOngoing(true).setOnlyAlertOnce(true).build()
 
+    fun monitoring(context: Context, device: AirPodsDevice?): Notification {
+        val battery = device?.battery?.let(BluetoothConnectionPolicy::lowestFreshBattery)
+        return base(context, SERVICE_CHANNEL)
+            .setContentTitle(device?.name ?: "Supervisión activa")
+            .setContentText(
+                when {
+                    device == null -> "Esperando una conexión"
+                    battery != null -> "Conectados · ${battery.first} ${battery.second}%"
+                    else -> "Conectados · batería no publicada"
+                }
+            )
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .build()
+    }
+
     fun event(context: Context, type: AirPodsNotificationType, title: String, detail: String) {
         if (!NotificationPreferences(context).enabled(type)) return
         if (Build.VERSION.SDK_INT >= 33 &&

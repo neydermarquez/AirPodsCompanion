@@ -5,6 +5,7 @@ enum class CapabilityAccess(val label: String) {
     DETECTABLE("Detectable"),
     PHYSICAL_CONTROL("Control físico"),
     SYSTEM_MANAGED("Gestionado por Android"),
+    PLAYER_MANAGED("Gestionado por el reproductor"),
     NOT_SUPPORTED("No disponible en Android"),
     NEEDS_EVIDENCE("Pendiente de evidencia")
 }
@@ -86,15 +87,15 @@ object AirPodsCapabilityRegistry {
         return ModelCapabilities(
             model,
             mapOf(
-                AirPodsFeature.MEDIA_CONTROLS to CapabilityAccess.CONTROLLABLE,
+                AirPodsFeature.MEDIA_CONTROLS to CapabilityAccess.PLAYER_MANAGED,
                 AirPodsFeature.CALL_AUDIO to CapabilityAccess.SYSTEM_MANAGED,
                 AirPodsFeature.MICROPHONE to CapabilityAccess.DETECTABLE,
                 AirPodsFeature.MICROPHONE_MUTE to CapabilityAccess.CONTROLLABLE,
                 AirPodsFeature.AUDIO_CODEC to CapabilityAccess.DETECTABLE,
-                AirPodsFeature.LOCK_SCREEN_CONTROLS to CapabilityAccess.SYSTEM_MANAGED,
+                AirPodsFeature.LOCK_SCREEN_CONTROLS to CapabilityAccess.PLAYER_MANAGED,
                 AirPodsFeature.LATENCY_DIAGNOSTIC to CapabilityAccess.NEEDS_EVIDENCE,
                 AirPodsFeature.LOW_POWER_MODE to CapabilityAccess.NOT_SUPPORTED,
-                AirPodsFeature.DEVICE_NAME to CapabilityAccess.SYSTEM_MANAGED,
+                AirPodsFeature.DEVICE_NAME to CapabilityAccess.CONTROLLABLE,
                 AirPodsFeature.ANC to modelAccess(supportsNoiseModes, CapabilityAccess.PHYSICAL_CONTROL),
                 AirPodsFeature.TRANSPARENCY to modelAccess(supportsNoiseModes, CapabilityAccess.PHYSICAL_CONTROL),
                 AirPodsFeature.ADAPTIVE_AUDIO to modelAccess(supportsAdaptive, CapabilityAccess.PHYSICAL_CONTROL),

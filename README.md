@@ -71,11 +71,13 @@ La versión actual utiliza una interfaz clara única, con representación visual
 - Búsqueda automática de dispositivos cercanos, reconocimiento de nombres publicados tardíamente y emparejamiento mediante Android.
 - Estado real de Bluetooth, conexión, desconexión y reconexión, con intento directo de A2DP/HFP y acceso guiado a Bluetooth del sistema cuando el fabricante lo exige.
 - Batería general real mediante eventos HFP y el nivel que publique la pila Bluetooth de Android.
-- Actualización inmediata por eventos y comprobación de respaldo cada 15 segundos mientras exista conexión.
+- Actualización inmediata por eventos, reconciliación de conexión cada 2 segundos y comprobación de batería cada 15 segundos.
 - Presentación separada de izquierda, derecha y estuche únicamente cuando el teléfono publique esas lecturas; nunca se completan con valores simulados.
 - Vigencia, estado de carga y fuente de cada lectura de batería, conservando el último valor conocido sin confundirlo con una lectura actual.
-- Controles multimedia compatibles: reproducción, pausa, pistas y volumen.
+- Integración con el reproductor activo de Android; los controles de reproducción y pantalla bloqueada permanecen en Spotify, YouTube Music u otra app responsable de la sesión.
 - Diagnóstico de rutas multimedia, micrófono y llamadas.
+- Lectura del códec A2DP cuando el sistema la exponga, usando la firma compatible con cada versión de Android y el puente nativo como respaldo.
+- Administración interna del dispositivo, con información de conexión y un nombre local personalizable.
 - Audio espacial y seguimiento de cabeza cuando Android los exponga.
 - Historial local de conexiones, errores y diagnósticos.
 - Notificaciones configurables y supervisión opcional en segundo plano.
@@ -124,7 +126,8 @@ Cada capacidad se presenta con un estado explícito:
 - **Controlable:** la aplicación puede ejecutar la acción.
 - **Detectable:** Android publica el estado, pero no necesariamente permite cambiarlo.
 - **Control físico:** depende de los controles del auricular.
-- **Gestionado por Android:** el sistema o el reproductor son responsables.
+- **Gestionado por Android:** el sistema operativo es responsable.
+- **Gestionado por el reproductor:** la aplicación que reproduce el audio publica y controla la sesión multimedia.
 - **No disponible:** Android no ofrece una API pública compatible.
 - **Pendiente de evidencia:** requiere validación reproducible con hardware real.
 

@@ -44,12 +44,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.VolumeDown
-import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Bluetooth
@@ -57,9 +56,6 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.Composable
@@ -249,8 +245,8 @@ fun AirPodsCompanionApp() {
                 onScan = controller::scan,
                 onPair = controller::pair,
                 onReconnect = controller::reconnect,
+                onRenameDevice = controller::renameDevice,
                 onClearHistory = controller::clearHistory,
-                mediaControls = mediaControls,
                 diagnostics = diagnostics,
                 selectedProfile = selectedProfile,
                 profileSettings = profileSettings,
@@ -409,8 +405,8 @@ private fun AppShell(
     onScan: () -> Unit,
     onPair: (String) -> Unit,
     onReconnect: (String) -> Unit,
+    onRenameDevice: (String, String) -> Boolean,
     onClearHistory: () -> Unit,
-    mediaControls: MediaControls,
     diagnostics: AudioDiagnostics,
     selectedProfile: ListeningProfile,
     profileSettings: ListeningProfileSettings,
@@ -512,7 +508,7 @@ private fun AppShell(
                             onScan,
                             onPair,
                             onReconnect,
-                            mediaControls,
+                            onRenameDevice,
                             diagnostics
                         )
                     }
@@ -894,17 +890,13 @@ private fun HomeDeviceHero(state: BluetoothUiState) {
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                DeviceVisual(
-                    label = "Auriculares",
-                    battery = earbudsBatteryText(device),
-                    fresh = earbudsBatteryFresh(device),
-                    modifier = Modifier.weight(1f),
-                    connected = connected
+                EarbudsBatteryVisual(
+                    device = device,
+                    modifier = Modifier.weight(1f)
                 )
-                DeviceVisual(
+                ComponentBatteryVisual(
                     label = "Estuche",
-                    battery = batteryText(device?.battery?.case),
-                    fresh = device?.battery?.case?.isFresh() == true,
+                    battery = device?.battery?.case,
                     modifier = Modifier.weight(1f),
                     connected = connected
                 )
@@ -928,30 +920,23 @@ private fun HomeDeviceHero(state: BluetoothUiState) {
 }
 
 @Composable
-private fun DeviceVisual(
+private fun ComponentBatteryVisual(
     label: String,
-    battery: String,
-    fresh: Boolean,
+    battery: ComponentBattery?,
     modifier: Modifier,
     connected: Boolean
 ) {
+    val percent = battery?.takeIf { it.isFresh() }?.percent
     Column(
         modifier.semantics {
-            contentDescription = "$label. $battery" +
-                if (fresh) "" else ". Sin lectura actual"
+            contentDescription = "$label. ${percent?.let { "$it por ciento" } ?: "sin lectura actual"}"
         },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(2.dp))
-        Text(
-            if (connected) battery else "—",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = if (fresh) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (connected && !fresh) {
+        Spacer(Modifier.height(7.dp))
+        BatteryRing(if (connected) percent else null)
+        if (connected && percent == null) {
             Text(
                 "Sin lectura",
                 style = MaterialTheme.typography.labelSmall,
@@ -961,27 +946,64 @@ private fun DeviceVisual(
     }
 }
 
-private fun batteryText(battery: ComponentBattery?): String =
-    battery?.takeIf { it.isFresh() }?.percent?.let { "$it%" } ?: "—"
-
-private fun earbudsBatteryFresh(device: AirPodsDevice?): Boolean {
-    if (device == null) return false
-    return device.battery.left.isFresh() ||
-        device.battery.right.isFresh() ||
-        device.battery.combined.isFresh()
+@Composable
+private fun EarbudsBatteryVisual(device: AirPodsDevice?, modifier: Modifier) {
+    val left = device?.battery?.left?.takeIf { it.isFresh() }?.percent
+    val right = device?.battery?.right?.takeIf { it.isFresh() }?.percent
+    val combined = device?.battery?.combined?.takeIf { it.isFresh() }?.percent
+    val separate = left != null && right != null && left != right
+    Column(
+        modifier.semantics {
+            contentDescription = when {
+                separate -> "Auricular izquierdo $left por ciento. Auricular derecho $right por ciento"
+                left != null -> "Auriculares $left por ciento"
+                right != null -> "Auriculares $right por ciento"
+                combined != null -> "Auriculares $combined por ciento"
+                else -> "Auriculares sin lectura actual"
+            }
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Auriculares", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(7.dp))
+        if (separate) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BatteryRing(left, "I")
+                BatteryRing(right, "D")
+            }
+        } else {
+            BatteryRing(left ?: right ?: combined)
+        }
+        if (left == null && right == null && combined == null && device != null) {
+            Text("Sin lectura", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
-private fun earbudsBatteryText(device: AirPodsDevice?): String {
-    if (device == null) return "—"
-    val left = device.battery.left.takeIf { it.isFresh() }?.percent
-    val right = device.battery.right.takeIf { it.isFresh() }?.percent
-    if (left != null || right != null) {
-        return listOfNotNull(
-            left?.let { "L $it%" },
-            right?.let { "R $it%" }
-        ).joinToString(" · ")
+@Composable
+private fun BatteryRing(percent: Int?, side: String? = null) {
+    val ringColor = Color(0xFF1FAF83)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = { ((percent ?: 0) / 100f).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxSize(),
+                color = if (percent != null) ringColor else MaterialTheme.colorScheme.outline.copy(alpha = .22f),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .65f),
+                strokeWidth = 4.dp
+            )
+            Text(
+                percent?.let { "$it%" } ?: "—",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (percent != null) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        side?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
-    return batteryText(device.battery.combined)
 }
 
 @Composable
@@ -1137,11 +1159,10 @@ private fun DevicesScreen(
     onScan: () -> Unit,
     onPair: (String) -> Unit,
     onReconnect: (String) -> Unit,
-    mediaControls: MediaControls,
+    onRenameDevice: (String, String) -> Boolean,
     diagnostics: AudioDiagnostics
 ) {
     val connectedDevice = state.connectedDevice
-    val context = LocalContext.current
     var connectedAudioState by remember(connectedDevice?.address) {
         mutableStateOf(diagnostics.inspect())
     }
@@ -1159,19 +1180,16 @@ private fun DevicesScreen(
             AvailableDevices(available, state.status, onPair, onReconnect)
         }
         if (connectedDevice != null) {
-            SectionHeader("Multimedia", "Control del sistema")
-            MediaControlPanel(mediaControls)
             SectionHeader("Estado de audio", "Lecturas actuales de Android")
             ConnectedAudioStatusPanel(
                 connectedAudioState,
+                state.codecLabel,
                 onToggleMicrophone = {
                     diagnostics.toggleMicrophone()
                     connectedAudioState = diagnostics.inspect()
                 }
             )
-            ConnectedDeviceActionsPanel {
-                context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-            }
+            ConnectedDeviceActionsPanel(connectedDevice, state.codecLabel, onRenameDevice)
             SectionHeader("Funciones del modelo", "Compatibilidad completa")
             ConnectedFeatureInventory(connectedDevice)
         }
@@ -1182,6 +1200,7 @@ private fun DevicesScreen(
 @Composable
 private fun ConnectedAudioStatusPanel(
     state: AudioDiagnosticState,
+    codecLabel: String?,
     onToggleMicrophone: () -> Unit
 ) {
     Surface(
@@ -1196,7 +1215,11 @@ private fun ConnectedAudioStatusPanel(
                 if (state.bluetoothOutput) "Activa por Bluetooth" else "Conectada, sin audio activo"
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
-            CompatibilityLine("Códec A2DP", "No publicado por la API pública")
+            CompatibilityLine(
+                "Códec A2DP",
+                codecLabel?.let { "$it · lectura del sistema" }
+                    ?: "Android no publicó una lectura para esta conexión"
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
             CompatibilityLine(
                 "Micrófono Bluetooth",
@@ -1266,15 +1289,21 @@ private fun ConnectedAudioStatusPanel(
 }
 
 @Composable
-private fun ConnectedDeviceActionsPanel(onBluetoothSettings: () -> Unit) {
+private fun ConnectedDeviceActionsPanel(
+    device: AirPodsDevice,
+    codecLabel: String?,
+    onRenameDevice: (String, String) -> Boolean
+) {
+    var showDetails by remember(device.address) { mutableStateOf(false) }
+    var alias by remember(device.address) { mutableStateOf(device.name) }
     Surface(
         modifier = Modifier.fillMaxWidth()
             .sizeIn(minHeight = 48.dp)
             .semantics {
                 role = Role.Button
-                contentDescription = "Administrar nombre y vinculación en los ajustes Bluetooth de Android"
+                contentDescription = "Administrar nombre e información del dispositivo dentro de AirPods Companion"
             }
-            .clickable(onClick = onBluetoothSettings),
+            .clickable { showDetails = true },
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .46f),
         border = androidx.compose.foundation.BorderStroke(
@@ -1296,7 +1325,7 @@ private fun ConnectedDeviceActionsPanel(onBluetoothSettings: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text("Administrar dispositivo", fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Nombre, vinculación y opciones disponibles en Android",
+                    "Nombre e información guardados en AirPods Companion",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1308,6 +1337,41 @@ private fun ConnectedDeviceActionsPanel(onBluetoothSettings: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
         }
+    }
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text("Administrar AirPods") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = alias,
+                        onValueChange = { alias = it.take(48) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Nombre") },
+                        supportingText = {
+                            Text("Se guarda localmente. Android lo aplicará también si la asociación del dispositivo lo permite.")
+                        }
+                    )
+                    CompatibilityLine("Modelo", device.identifiedModel)
+                    CompatibilityLine("Vinculación", if (device.bonded) "Vinculado" else "No vinculado")
+                    CompatibilityLine("Conexión", if (device.connected) "Conectado" else "Desconectado")
+                    CompatibilityLine("Códec", codecLabel ?: "Sin lectura")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = alias.isNotBlank(),
+                    onClick = {
+                        if (onRenameDevice(device.address, alias)) showDetails = false
+                    }
+                ) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDetails = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 
@@ -1485,47 +1549,6 @@ private fun AvailableDevices(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .12f))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MediaControlPanel(controls: MediaControls) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = .52f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            MediaControl(Icons.AutoMirrored.Outlined.VolumeDown, "Bajar volumen", controls::volumeDown)
-            MediaControl(Icons.Outlined.SkipPrevious, "Anterior", controls::previous)
-            MediaControl(Icons.Outlined.PlayArrow, "Reproducir o pausar", controls::playPause, true)
-            MediaControl(Icons.Outlined.SkipNext, "Siguiente", controls::next)
-            MediaControl(Icons.AutoMirrored.Outlined.VolumeUp, "Subir volumen", controls::volumeUp)
-        }
-    }
-}
-
-@Composable
-private fun MediaControl(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    description: String,
-    action: () -> Unit,
-    prominent: Boolean = false
-) {
-    Surface(
-        modifier = Modifier.size(if (prominent) 48.dp else 42.dp),
-        shape = RoundedCornerShape(if (prominent) 16.dp else 14.dp),
-        color = if (prominent) MaterialTheme.colorScheme.primary else Color.Transparent,
-        contentColor = if (prominent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-    ) {
-        Box(Modifier.fillMaxSize().clickable(onClick = action), contentAlignment = Alignment.Center) {
-            androidx.compose.material3.Icon(icon, contentDescription = description, modifier = Modifier.size(if (prominent) 25.dp else 22.dp))
         }
     }
 }
@@ -2244,6 +2267,15 @@ private fun ProtocolCaptureCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (state.activeScenario == null && state.lastCaptureSampleCount == 0) {
+                Text(
+                    "La última prueba finalizó correctamente, pero Android no publicó ninguna señal observable. " +
+                        "Esto no se contará como evidencia.",
+                    modifier = Modifier.padding(bottom = 13.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
     pendingScenario?.let { scenario ->

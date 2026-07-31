@@ -77,7 +77,7 @@ class AirPodsMonitorService : Service() {
             previousBattery = it.batteryPercent
         }
         AirPodsNotifications.createChannels(this)
-        startForeground(AirPodsNotifications.SERVICE_ID, AirPodsNotifications.monitoring(this, snapshots.load()))
+        startForeground(AirPodsNotifications.SERVICE_ID, AirPodsNotifications.monitoring(this, device = null))
         repository.acquire(RepositoryOwner.MONITOR_SERVICE)
         monitorStatus.record(MonitorState.RUNNING, "Observando el repositorio Bluetooth")
         repository.controller.reloadHistory()
@@ -123,6 +123,7 @@ class AirPodsMonitorService : Service() {
 
     private fun handleState(state: BluetoothUiState) {
         val connected = state.connectedDevice
+        snapshots.save(connected)
         val currentAddress = connected?.address
         if (currentAddress != previousConnectedAddress) {
             when {
@@ -158,7 +159,7 @@ class AirPodsMonitorService : Service() {
 
         getSystemService(NotificationManager::class.java).notify(
             AirPodsNotifications.SERVICE_ID,
-            AirPodsNotifications.monitoring(this, snapshots.load())
+            AirPodsNotifications.monitoring(this, connected)
         )
     }
 
